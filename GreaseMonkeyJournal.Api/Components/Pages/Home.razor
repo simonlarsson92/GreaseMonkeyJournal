@@ -1,0 +1,55 @@
+@page "/"
+
+<PageTitle>Grease Monkey Journal</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="jumbotron rounded p-5 mb-4">
+                <h1 class="display-4 text-center">Welcome to Grease Monkey Journal</h1>
+                <p class="lead text-center">Keep track of your vehicle maintenance and repairs in one convenient location.</p>
+                <p class="text-center">Use the navigation menu to get started with managing your vehicles and maintenance records.</p>
+                <div class="text-center">
+                    <a class="btn btn-primary btn-lg" href="/create-vehicle" role="button">
+                        <i class="bi bi-plus-circle me-2"></i>Create Your First Vehicle
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-car-front text-primary" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Manage Vehicles</h5>
+                            <p class="card-text">Add and organize your vehicles with detailed information.</p>
+                            <a href="/vehicles" class="btn btn-primary">View Vehicles</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-journal-text text-success" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Track Maintenance</h5>
+                            <p class="card-text">Log repairs, maintenance, and service records.</p>
+                            <a href="/vehicle/logs" class="btn btn-primary">View Logs</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-bell text-warning" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Set Reminders</h5>
+                            <p class="card-text">Never miss important maintenance with reminders.</p>
+                            <a href="/reminders" class="btn btn-primary">View Reminders</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code { }

@@ -1,0 +1,148 @@
+<!-- Modal -->
+<div class="modal fade" id="addLogEntryModal" tabindex="-1" aria-labelledby="addLogEntryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addLogEntryModalLabel">Add Log Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="CloseDialog"></button>
+            </div>
+
+            <div class="modal-body">
+                <EditForm Model="entry" OnValidSubmit="Add">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="mb-3">
+                        <label for="vehicleSelect" class="form-label">Vehicle *</label>
+                        <select id="vehicleSelect" class="form-select" @bind="entry.VehicleId" required>
+                            <option value="0">Select a vehicle...</option>
+                            @if (Vehicles != null)
+                            {
+                                @foreach (var v in Vehicles)
+                                {
+                                    <option value="@v.Id">@v.Make @v.Model (@v.Registration)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description *</label>
+                        <input type="text" class="form-control" id="description" @bind="entry.Description" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" @bind="entry.Date" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Type *</label>
+                        <select id="type" class="form-select" @bind="entry.Type" required>
+                            <option value="">Select type...</option>
+                            <option value="repair">Repair</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cost" class="form-label">Cost *</label>
+                        <input type="number" class="form-control" id="cost" @bind="entry.Cost" step="0.01" min="0" required />
+                    </div>
+
+                    @if (selectedVehicle != null && selectedVehicle.SpeedometerType != SpeedometerType.None)
+                    {
+                        <div class="mb-3">
+                            <label for="speedometer" class="form-label">@GetSpeedometerLabel(selectedVehicle.SpeedometerType)</label>
+                            <input type="number" class="form-control" id="speedometer" @bind="entry.SpeedometerReading" min="0" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" rows="3" maxlength="500" @bind="entry.Notes"></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Add</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public LogEntry? LogEntry { get; set; }
+    [Parameter] public int VehicleId { get; set; }
+    [Parameter] public EventCallback<LogEntry> OnLogEntryAdded { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    public IEnumerable<Vehicle>? Vehicles { get; set; } = new List<Vehicle>();
+    private LogEntry entry = new() { Date = DateTime.Now };
+    private Vehicle? selectedVehicle;
+
+    private int SelectedVehicleId
+    {
+        get => entry.VehicleId;
+        set
+        {
+            entry.VehicleId = value;
+            selectedVehicle = Vehicles?.FirstOrDefault(v => v.Id == value);
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (LogEntry is not null)
+            entry = LogEntry;
+        if (VehicleId > 0)
+        {
+            var vehicle = await VehicleService.GetByIdAsync(VehicleId);
+            if (vehicle != null)
+            {
+                Vehicles = new List<Vehicle> { vehicle };
+                selectedVehicle = vehicle;
+                entry.VehicleId = vehicle.Id;
+            }
+        }
+        else
+        {
+            Vehicles = await VehicleService.GetAllAsync();
+        }
+    }
+
+    public async Task ShowModal()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('addLogEntryModal')).show()");
+    }
+
+    private string GetSpeedometerLabel(SpeedometerType speedometerType)
+    {
+        return speedometerType switch
+        {
+            SpeedometerType.KM => "Kilometers",
+            SpeedometerType.Hours => "Hours",
+            _ => "Reading"
+        };
+    }
+
+    private async Task Add()
+    {
+        if (entry.VehicleId > 0 && !string.IsNullOrWhiteSpace(entry.Description) && !string.IsNullOrWhiteSpace(entry.Type))
+        {
+            await OnLogEntryAdded.InvokeAsync(entry);
+            await CloseDialog();
+        }
+    }
+
+    private async Task CloseDialog()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('addLogEntryModal'))?.hide()");
+        await OnClosed.InvokeAsync();
+    }
+}

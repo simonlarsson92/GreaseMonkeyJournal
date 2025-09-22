@@ -1,0 +1,104 @@
+@page "/reminders"
+@using GreaseMonkeyJournal.Api.Components.Models
+
+<PageTitle>All Reminders</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Reminders</h5>
+                </div>
+                <div class="card-body">
+                    @if (remindersList.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Vehicle</th>
+                                        <th>Due Date</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reminder in remindersList)
+                                    {
+                                        <tr class="@(IsOverdue(reminder) ? "table-danger" : IsUpcoming(reminder) ? "table-warning" : "")">
+                                            <td>@reminder.Vehicle?.Make @reminder.Vehicle?.Model (@reminder.Vehicle?.Registration)</td>
+                                            <td>
+                                                @reminder.DueDate.ToShortDateString()
+                                                @if (IsOverdue(reminder))
+                                                {
+                                                    <i class="bi bi-exclamation-triangle text-danger ms-1" title="Overdue"></i>
+                                                }
+                                                else if (IsUpcoming(reminder))
+                                                {
+                                                    <i class="bi bi-clock text-warning ms-1" title="Due soon"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @(reminder.Type == "repair" ? "bg-warning" : "bg-success")">
+                                                    @reminder.Type
+                                                </span>
+                                            </td>
+                                            <td>@reminder.Description</td>
+                                            <td>
+                                                @if (reminder.IsCompleted)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-circle me-1"></i>Completed
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">
+                                                        <i class="bi bi-clock me-1"></i>Pending
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No reminders found. Create some vehicles and add reminders to see them here.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private ReminderService ReminderService { get; set; } = default!;
+    [Inject] private VehicleService VehicleService { get; set; } = default!;
+
+    private List<Reminder> remindersList = new();
+    private List<Reminder> _sortedReminders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var reminders = await ReminderService.GetAllRemindersWithVehicleAsync();
+        remindersList = reminders.OrderBy(r => r.DueDate).ToList();
+    }
+
+    private bool IsOverdue(Reminder reminder)
+    {
+        return !reminder.IsCompleted && reminder.DueDate < DateTime.Today;
+    }
+
+    private bool IsUpcoming(Reminder reminder)
+    {
+        return !reminder.IsCompleted && reminder.DueDate >= DateTime.Today && reminder.DueDate <= DateTime.Today.AddDays(7);
+    }
+}

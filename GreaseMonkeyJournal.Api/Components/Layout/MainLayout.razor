@@ -1,0 +1,85 @@
+@inherits LayoutComponentBase
+@using Microsoft.Extensions.Options
+@using GreaseMonkeyJournal.Api.Components.Models
+@inject IOptions<AppSettings> AppSettingsOptions
+@inject IJSRuntime JSRuntime
+
+<div data-bs-theme="@(_isDarkMode ? "dark" : "light")">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" @onclick="ToggleSidebar">
+                <i class="bi bi-list"></i>
+            </button>
+            <a class="navbar-brand ms-3 d-flex align-items-center" href="/">
+                <img src="/images/grease_monkey_journal.png" alt="@AppSettingsOptions.Value.ApplicationTitle" class="navbar-brand-img me-2" />
+                @AppSettingsOptions.Value.ApplicationTitle
+            </a>
+            <div class="navbar-nav ms-auto">
+                <button class="theme-toggle" @onclick="ToggleDarkMode" title="Toggle dark mode">
+                    <i class="bi @(_isDarkMode ? "bi-sun" : "bi-moon")"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <nav class="sidebar @(_sidebarCollapsed ? "collapsed" : "")">
+        <div class="sidebar-sticky">
+            <NavMenu />
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content @(_sidebarCollapsed ? "sidebar-collapsed" : "")">
+        <div class="content-wrapper">
+            @Body
+        </div>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">??</span>
+</div>
+
+@code {
+    private bool _sidebarCollapsed = false;
+    private bool _isDarkMode = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Load theme preference from localStorage
+                var darkModeValue = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "darkMode");
+                var isDarkMode = darkModeValue == "true";
+                if (isDarkMode != _isDarkMode)
+                {
+                    _isDarkMode = isDarkMode;
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // If localStorage fails, use default theme
+            }
+        }
+    }
+
+    private void ToggleSidebar()
+    {
+        _sidebarCollapsed = !_sidebarCollapsed;
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "darkMode", _isDarkMode);
+    }
+}
+
+

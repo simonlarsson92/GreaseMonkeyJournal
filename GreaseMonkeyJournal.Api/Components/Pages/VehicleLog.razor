@@ -1,0 +1,160 @@
+@page "/vehicle/{vehicleId:int}/logs"
+@page "/vehicle/logs"
+@using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
+
+<PageTitle>Vehicle Log Entries</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Log Entries</h5>
+                        <button type="button" class="btn btn-primary" @onclick="ShowAddDialog">
+                            <i class="bi bi-plus-circle me-2"></i>Add Log Entry
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (logEntries.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Vehicle</th>
+                                        <th>Description</th>
+                                        <th>Type</th>
+                                        <th>Cost</th>
+                                        <th>Reading</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in logEntries)
+                                    {
+                                        <tr>
+                                            <td>@entry.Date?.ToShortDateString()</td>
+                                            <td>@entry.Vehicle?.Make @entry.Vehicle?.Model (@entry.Vehicle?.Registration)</td>
+                                            <td>@entry.Description</td>
+                                            <td>
+                                                <span class="badge @(entry.Type == "repair" ? "bg-warning" : "bg-success")">
+                                                    @entry.Type
+                                                </span>
+                                            </td>
+                                            <td>@entry.Cost.ToString("C")</td>
+                                            <td>@GetSpeedometerReadingDisplay(entry)</td>
+                                            <td>@entry.Notes</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No log entries found. Click "Add Log Entry" to create your first entry.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showDialog)
+{
+    <AddLogEntryDialog 
+        @ref="dialogComponent"
+        VehicleId="@(vehicleId ?? 0)" 
+        OnLogEntryAdded="HandleLogEntryAdded" 
+        OnClosed="HandleDialogClosed" />
+}
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                @successMessage
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? vehicleId { get; set; }
+    [Inject] private LogEntryService LogEntryService { get; set; } = default!;
+    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private IEnumerable<LogEntry> logEntries = new List<LogEntry>();
+    private bool IsSingleMode => vehicleId.HasValue;
+    private bool showDialog = false;
+    private bool showSuccessMessage = false;
+    private string successMessage = "";
+    private AddLogEntryDialog? dialogComponent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        logEntries = await GetLogEntriesAsync();
+    }
+
+    private async Task ShowAddDialog()
+    {
+        showDialog = true;
+        StateHasChanged();
+        if (dialogComponent != null)
+        {
+            await dialogComponent.ShowModal();
+        }
+    }
+
+    private async Task HandleLogEntryAdded(LogEntry newEntry)
+    {
+        await LogEntryService.AddAsync(newEntry);
+        logEntries = await GetLogEntriesAsync();
+        successMessage = "Log entry created successfully!";
+        showSuccessMessage = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+    private void HandleDialogClosed()
+    {
+        showDialog = false;
+        StateHasChanged();
+    }
+
+    private async Task<IEnumerable<LogEntry>> GetLogEntriesAsync()
+    {
+        if (IsSingleMode)
+            return await LogEntryService.GetByVehicleIdAsync(vehicleId!.Value);
+        else
+            return await LogEntryService.GetAllAsync();
+    }
+
+    private string GetSpeedometerReadingDisplay(LogEntry logEntry)
+    {
+        if (logEntry.Vehicle == null || logEntry.Vehicle.SpeedometerType == SpeedometerType.None)
+            return "N/A";
+        if (logEntry.SpeedometerReading.HasValue)
+        {
+            var unit = logEntry.Vehicle.SpeedometerType == SpeedometerType.KM ? "km" : "h";
+            return $"{logEntry.SpeedometerReading:N0} {unit}";
+        }
+        return "N/A";
+    }
+}

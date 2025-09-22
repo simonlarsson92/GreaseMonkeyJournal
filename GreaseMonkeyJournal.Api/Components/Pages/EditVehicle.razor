@@ -1,0 +1,118 @@
+@page "/edit-vehicle/{Id:int}"
+@using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
+
+<PageTitle>Edit Vehicle</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Edit Vehicle</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (vehicle == null)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Vehicle not found.
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="vehicle" OnValidSubmit="UpdateVehicleHandler">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="make" class="form-label">Make *</label>
+                                <input type="text" class="form-control" id="make" @bind="vehicle.Make" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="model" class="form-label">Model *</label>
+                                <input type="text" class="form-control" id="model" @bind="vehicle.Model" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="year" class="form-label">Year *</label>
+                                <input type="number" class="form-control" id="year" @bind="vehicle.Year" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="registration" class="form-label">Registration *</label>
+                                <input type="text" class="form-control" id="registration" @bind="vehicle.Registration" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="speedometerType" class="form-label">Speedometer Type *</label>
+                                <select id="speedometerType" class="form-select" @bind="vehicle.SpeedometerType" required>
+                                    <option value="">Select type...</option>
+                                    <option value="@SpeedometerType.None">None</option>
+                                    <option value="@SpeedometerType.KM">Kilometers</option>
+                                    <option value="@SpeedometerType.Hours">Hours</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                Vehicle updated successfully!
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected Vehicle? vehicle;
+    protected bool isLoading = true;
+    private bool showSuccessMessage = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        vehicle = await VehicleService.GetByIdAsync(Id);
+        isLoading = false;
+    }
+
+    protected async Task UpdateVehicleHandler()
+    {
+        if (vehicle != null)
+        {
+            await VehicleService.UpdateAsync(vehicle);
+            showSuccessMessage = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/vehicles");
+        }
+    }
+}

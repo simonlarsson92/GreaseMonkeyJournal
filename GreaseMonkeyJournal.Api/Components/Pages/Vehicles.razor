@@ -1,0 +1,94 @@
+@page "/vehicles"
+@using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
+
+<PageTitle>Vehicles</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Vehicle List</h5>
+                        <a href="/create-vehicle" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Create Vehicle
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (vehicles.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Make</th>
+                                        <th>Model</th>
+                                        <th>Year</th>
+                                        <th>Registration</th>
+                                        <th>Speedometer</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var vehicle in vehicles)
+                                    {
+                                        <tr>
+                                            <td>@vehicle.Make</td>
+                                            <td>@vehicle.Model</td>
+                                            <td>@vehicle.Year</td>
+                                            <td>@vehicle.Registration</td>
+                                            <td>@GetSpeedometerTypeDisplay(vehicle.SpeedometerType)</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="/vehicle/@vehicle.Id/logs" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-journal-text me-1"></i>Logs
+                                                    </a>
+                                                    <a href="/vehicle/@vehicle.Id/reminders" class="btn btn-sm btn-outline-info">
+                                                        <i class="bi bi-bell me-1"></i>Reminders
+                                                    </a>
+                                                    <a href="/edit-vehicle/@vehicle.Id" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-pencil me-1"></i>Edit
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No vehicles have been created yet.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    private List<Vehicle> vehicles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        vehicles = await VehicleService.GetAllAsync();
+    }
+
+    private string GetSpeedometerTypeDisplay(SpeedometerType speedometerType)
+    {
+        return speedometerType switch
+        {
+            SpeedometerType.KM => "Kilometers",
+            SpeedometerType.Hours => "Hours",
+            SpeedometerType.None => "None",
+            _ => "Unknown"
+        };
+    }
+}

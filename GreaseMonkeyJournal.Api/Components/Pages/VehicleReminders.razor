@@ -1,0 +1,267 @@
+@page "/vehicle/{VehicleId:int}/reminders"
+@using GreaseMonkeyJournal.Api.Components.Models
+
+<PageTitle>Reminders</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Reminders for @vehicle?.Make @vehicle?.Model (@vehicle?.Registration)</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (vehicle == null)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Vehicle not found.
+                        </div>
+                    }
+                    else
+                    {
+                        @if (reminders.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Type</th>
+                                            <th>Due Date</th>
+                                            @if (vehicle.SpeedometerType != SpeedometerType.None)
+                                            {
+                                                <th>Due @(GetSpeedometerLabel(vehicle.SpeedometerType))</th>
+                                            }
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var reminder in reminders)
+                                        {
+                                            <tr>
+                                                <td>@reminder.Description</td>
+                                                <td>
+                                                    <span class="badge @(reminder.Type == "repair" ? "bg-warning" : "bg-success")">
+                                                        @reminder.Type
+                                                    </span>
+                                                </td>
+                                                <td>@reminder.DueDate.ToShortDateString()</td>
+                                                @if (vehicle.SpeedometerType != SpeedometerType.None)
+                                                {
+                                                    <td>@(reminder.DueSpeedometerReading?.ToString() ?? "N/A")</td>
+                                                }
+                                                <td>
+                                                    @if (reminder.IsCompleted)
+                                                    {
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check-circle me-1"></i>Completed
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning">
+                                                            <i class="bi bi-clock me-1"></i>Pending
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        @if (!reminder.IsCompleted)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-success" @onclick="() => CompleteReminderAsync(reminder)">
+                                                                <i class="bi bi-check-circle me-1"></i>Complete
+                                                            </button>
+                                                        }
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteReminderAsync(reminder)">
+                                                            <i class="bi bi-trash me-1"></i>Delete
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info" role="alert">
+                                <i class="bi bi-info-circle me-2"></i>
+                                No reminders found for this vehicle.
+                            </div>
+                        }
+
+                        <hr class="my-4">
+                        
+                        <h6>Add Reminder</h6>
+                        <EditForm Model="newReminderModel" OnValidSubmit="AddReminderAsync">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="description" class="form-label">Description *</label>
+                                    <input type="text" class="form-control" id="description" @bind="newDescription" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="type" class="form-label">Type *</label>
+                                    <select id="type" class="form-select" @bind="newType" required>
+                                        <option value="">Select type...</option>
+                                        <option value="repair">Repair</option>
+                                        <option value="maintenance">Maintenance</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="dueDate" class="form-label">Due Date *</label>
+                                    <input type="date" class="form-control" id="dueDate" @bind="newDueDate" @bind:format="yyyy-MM-dd" required />
+                                </div>
+                                @if (vehicle.SpeedometerType != SpeedometerType.None)
+                                {
+                                    <div class="col-md-6">
+                                        <label for="dueReading" class="form-label">Due @(GetSpeedometerLabel(vehicle.SpeedometerType))</label>
+                                        <input type="number" class="form-control" id="dueReading" @bind="newDueSpeedometerReading" />
+                                    </div>
+                                }
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle me-2"></i>Add Reminder
+                                    </button>
+                                </div>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                @successMessage
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int VehicleId { get; set; }
+    [Inject] private ReminderService ReminderService { get; set; } = default!;
+    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private Vehicle? vehicle;
+    private List<Reminder> reminders = new();
+    private string newDescription = string.Empty;
+    private string newType = string.Empty;
+    private DateTime newDueDate = DateTime.Today.AddDays(30);
+    private decimal? newDueSpeedometerReading;
+    private bool isLoading = true;
+    private bool showSuccessMessage = false;
+    private string successMessage = "";
+    private object newReminderModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        vehicle = await VehicleService.GetByIdAsync(VehicleId);
+        reminders = await ReminderService.GetRemindersForVehicleAsync(VehicleId);
+        isLoading = false;
+    }
+
+    private async Task AddReminderAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newDescription) || string.IsNullOrWhiteSpace(newType)) return;
+        var reminder = new Reminder
+        {
+            VehicleId = VehicleId,
+            Description = newDescription,
+            Type = newType,
+            DueDate = newDueDate,
+            DueSpeedometerReading = newDueSpeedometerReading,
+            IsCompleted = false
+        };
+        await ReminderService.AddReminderAsync(reminder);
+        reminders = await ReminderService.GetRemindersForVehicleAsync(VehicleId);
+        newDescription = string.Empty;
+        newType = string.Empty;
+        newDueDate = DateTime.Today.AddDays(30);
+        newDueSpeedometerReading = null;
+        successMessage = "Reminder added successfully!";
+        showSuccessMessage = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+    private async Task CompleteReminderAsync(Reminder reminder)
+    {
+        var logDescription = $"Completed: {reminder.Description}";
+        var logDate = DateTime.Today;
+        bool recreate = false;
+        DateTime? newDueDate = null;
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Mark reminder '{reminder.Description}' as complete and create log entry?"))
+        {
+            recreate = await JSRuntime.InvokeAsync<bool>("confirm", "Recreate this reminder with a new due date?");
+            if (recreate)
+            {
+                newDueDate = DateTime.Today.AddDays(30);
+            }
+            await ReminderService.CompleteReminderAsync(reminder.Id, logDescription, logDate, recreate, newDueDate);
+            reminders = await ReminderService.GetRemindersForVehicleAsync(VehicleId);
+            successMessage = "Reminder completed successfully!";
+            showSuccessMessage = true;
+            StateHasChanged();
+            await Task.Delay(3000);
+            showSuccessMessage = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteReminderAsync(Reminder reminder)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Delete reminder '{reminder.Description}'?"))
+        {
+            await ReminderService.DeleteReminderAsync(reminder.Id);
+            reminders = await ReminderService.GetRemindersForVehicleAsync(VehicleId);
+            successMessage = "Reminder deleted successfully!";
+            showSuccessMessage = true;
+            StateHasChanged();
+            await Task.Delay(3000);
+            showSuccessMessage = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task OnDueDateChanged(DateTime? date)
+    {
+        if (date.HasValue)
+            newDueDate = date.Value;
+        return Task.CompletedTask;
+    }
+
+    private string GetSpeedometerLabel(SpeedometerType speedometerType)
+    {
+        return speedometerType switch
+        {
+            SpeedometerType.KM => "Kilometers",
+            SpeedometerType.Hours => "Hours",
+            _ => "Reading"
+        };
+    }
+}
