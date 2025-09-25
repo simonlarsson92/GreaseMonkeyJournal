@@ -73,7 +73,7 @@
 }
 
 @code {
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
 
     private Vehicle vehicle = new();
     private bool showSuccessMessage = false;

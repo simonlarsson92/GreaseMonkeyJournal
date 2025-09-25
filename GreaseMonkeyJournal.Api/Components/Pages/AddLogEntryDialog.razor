@@ -78,7 +78,7 @@
     [Parameter] public int VehicleId { get; set; }
     [Parameter] public EventCallback<LogEntry> OnLogEntryAdded { get; set; }
     [Parameter] public EventCallback OnClosed { get; set; }
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     public IEnumerable<Vehicle>? Vehicles { get; set; } = new List<Vehicle>();

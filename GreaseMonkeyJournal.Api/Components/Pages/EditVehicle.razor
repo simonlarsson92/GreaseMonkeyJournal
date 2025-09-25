@@ -91,7 +91,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     protected Vehicle? vehicle;

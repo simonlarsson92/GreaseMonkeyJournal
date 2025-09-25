@@ -94,8 +94,8 @@
 
 @code {
     [Parameter] public int? vehicleId { get; set; }
-    [Inject] private LogEntryService LogEntryService { get; set; } = default!;
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private ILogEntryService LogEntryService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private IEnumerable<LogEntry> logEntries = new List<LogEntry>();

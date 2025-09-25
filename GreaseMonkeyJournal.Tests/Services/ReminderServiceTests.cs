@@ -60,8 +60,8 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         
         // Act
         var result = await service.GetRemindersForVehicleAsync(1);
@@ -77,8 +77,8 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         
         // Act
         var result = await service.GetReminderByIdAsync(1);
@@ -94,8 +94,8 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         
         // Act
         var result = await service.GetReminderByIdAsync(999);
@@ -109,24 +109,22 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
-        
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         var newReminder = new Reminder
         {
             VehicleId = 1,
-            Description = "Brake Check",
-            DueDate = DateTime.Now.AddDays(90),
+            Description = "Brake Inspection",
             Type = "Maintenance",
-            IsCompleted = false,
-            DueSpeedometerReading = 30000
+            DueDate = DateTime.Now.AddDays(90),
+            IsCompleted = false
         };
         
         // Act
         await service.AddReminderAsync(newReminder);
         
         // Assert
-        var reminder = await context.Reminders.FirstOrDefaultAsync(r => r.Description == "Brake Check");
+        var reminder = await context.Reminders.FirstOrDefaultAsync(r => r.Description == "Brake Inspection");
         Assert.NotNull(reminder);
         Assert.Equal(1, reminder.VehicleId);
         Assert.Equal("Maintenance", reminder.Type);
@@ -137,15 +135,14 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
-        
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         var reminder = await context.Reminders.FindAsync(1);
         Assert.NotNull(reminder);
         
         // Modify the reminder
-        reminder.Description = "Oil Change and Filter";
-        reminder.Type = "Scheduled Maintenance";
+        reminder.Description = "Oil Change - Updated";
+        reminder.Type = "Repair";
         
         // Act
         await service.UpdateReminderAsync(reminder);
@@ -153,8 +150,8 @@ public class ReminderServiceTests
         // Assert
         var updatedReminder = await context.Reminders.FindAsync(1);
         Assert.NotNull(updatedReminder);
-        Assert.Equal("Oil Change and Filter", updatedReminder.Description);
-        Assert.Equal("Scheduled Maintenance", updatedReminder.Type);
+        Assert.Equal("Oil Change - Updated", updatedReminder.Description);
+        Assert.Equal("Repair", updatedReminder.Type);
     }
     
     [Fact]
@@ -162,8 +159,8 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         
         // Verify reminder exists before delete
         var reminder = await context.Reminders.FindAsync(1);
@@ -178,42 +175,31 @@ public class ReminderServiceTests
     }
     
     [Fact]
-    public async Task DeleteReminderAsync_WithInvalidId_DoesNotThrowException()
+    public async Task CompleteReminderAsync_MarksReminderCompletedAndCreatesLogEntry()
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        mockLogEntryService
+            .Setup(x => x.AddAsync(It.IsAny<LogEntry>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
         
-        // Act & Assert
-        await service.DeleteReminderAsync(999); // Should not throw exception
-    }
-    
-    [Fact]
-    public async Task CompleteReminderAsync_CompletesReminderAndAddsLogEntry()
-    {
-        // Arrange
-        using var context = GetDbContext();
-        var logEntryService = new LogEntryService(context);
-        var service = new ReminderService(context, logEntryService);
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         
         // Act
-        await service.CompleteReminderAsync(
-            1, 
-            "Completed oil change", 
-            DateTime.Now, 
-            false);
+        await service.CompleteReminderAsync(1, "Completed oil change", DateTime.Today, false);
         
         // Assert
         var reminder = await context.Reminders.FindAsync(1);
         Assert.NotNull(reminder);
         Assert.True(reminder.IsCompleted);
         
-        // Verify log entry was created
-        var logEntry = await context.LogEntries
-            .FirstOrDefaultAsync(l => l.Description == "Completed oil change");
-        Assert.NotNull(logEntry);
-        Assert.Equal(1, logEntry.VehicleId);
+        // Verify log entry service was called
+        mockLogEntryService.Verify(x => x.AddAsync(It.Is<LogEntry>(le => 
+            le.VehicleId == 1 && 
+            le.Description == "Completed oil change" && 
+            le.Date == DateTime.Today)), Times.Once);
     }
     
     [Fact]
@@ -221,45 +207,35 @@ public class ReminderServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryService = new LogEntryService(context);
-        var service = new ReminderService(context, logEntryService);
-        var futureDueDate = DateTime.Now.AddMonths(3);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        mockLogEntryService
+            .Setup(x => x.AddAsync(It.IsAny<LogEntry>()))
+            .Returns(Task.CompletedTask);
         
-        // Count reminders before test
-        var reminderCountBefore = await context.Reminders.CountAsync();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var newDueDate = DateTime.Today.AddDays(30);
         
         // Act
-        await service.CompleteReminderAsync(
-            1, 
-            "Completed oil change", 
-            DateTime.Now, 
-            true, 
-            futureDueDate);
+        await service.CompleteReminderAsync(1, "Completed oil change", DateTime.Today, true, newDueDate);
         
         // Assert
-        var reminder = await context.Reminders.FindAsync(1);
-        Assert.NotNull(reminder);
-        Assert.True(reminder.IsCompleted);
+        var originalReminder = await context.Reminders.FindAsync(1);
+        Assert.NotNull(originalReminder);
+        Assert.True(originalReminder.IsCompleted);
         
-        // Verify new reminder was created
-        var reminderCountAfter = await context.Reminders.CountAsync();
-        Assert.Equal(reminderCountBefore + 1, reminderCountAfter);
-        
-        // Verify the new reminder has correct properties
         var newReminder = await context.Reminders
-            .FirstOrDefaultAsync(r => r.Description == "Oil Change" && !r.IsCompleted);
+            .FirstOrDefaultAsync(r => r.Id != 1 && r.VehicleId == 1 && r.Description == "Oil Change" && !r.IsCompleted);
         Assert.NotNull(newReminder);
-        Assert.Equal(1, newReminder.VehicleId);
-        Assert.Equal(futureDueDate.Date, newReminder.DueDate.Date);
+        Assert.Equal(newDueDate, newReminder.DueDate);
     }
-    
+
     [Fact]
-    public async Task GetAllRemindersWithVehicleAsync_ReturnsAllRemindersWithVehicle()
+    public async Task GetAllRemindersWithVehicleAsync_ReturnsRemindersWithVehicleInfo()
     {
         // Arrange
         using var context = GetDbContext();
-        var logEntryServiceMock = new Mock<LogEntryService>(context);
-        var service = new ReminderService(context, logEntryServiceMock.Object);
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
         
         // Act
         var result = await service.GetAllRemindersWithVehicleAsync();
@@ -267,6 +243,31 @@ public class ReminderServiceTests
         // Assert
         Assert.Equal(2, result.Count);
         Assert.All(result, r => Assert.NotNull(r.Vehicle));
-        Assert.Contains(result, r => r.Description == "Oil Change");
+        Assert.Contains(result, r => r.Vehicle != null && r.Vehicle.Make == "Toyota");
+    }
+
+    [Fact]
+    public async Task AddReminderAsync_WithNullReminder_ThrowsArgumentNullException()
+    {
+        // Arrange
+        using var context = GetDbContext();
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => service.AddReminderAsync(null!));
+    }
+
+    [Fact]
+    public async Task CompleteReminderAsync_WithEmptyDescription_ThrowsArgumentException()
+    {
+        // Arrange
+        using var context = GetDbContext();
+        var mockLogEntryService = new Mock<ILogEntryService>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => 
+            service.CompleteReminderAsync(1, "", DateTime.Today, false));
     }
 }

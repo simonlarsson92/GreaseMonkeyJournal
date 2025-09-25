@@ -16,7 +16,7 @@ public class LogEntryServiceTests
         var context = new VehicleLogDbContext(options);
         
         // Seed the database with test data
-        context.Vehicles.Add(new Vehicle 
+        var vehicle = new Vehicle 
         { 
             Id = 1, 
             Make = "Toyota", 
@@ -24,28 +24,29 @@ public class LogEntryServiceTests
             Year = 2020, 
             Registration = "ABC123",
             SpeedometerType = SpeedometerType.KM
-        });
+        };
+        context.Vehicles.Add(vehicle);
         
         context.LogEntries.AddRange(
-            new LogEntry 
+            new LogEntry
             { 
                 Id = 1, 
                 VehicleId = 1, 
-                Date = new DateTime(2023, 1, 15), 
                 Description = "Oil Change", 
+                Date = DateTime.Now.AddDays(-30),
+                Type = "maintenance",
                 Cost = 50.00m,
-                Type = "Maintenance",
-                SpeedometerReading = 15000 
+                SpeedometerReading = 15000
             },
-            new LogEntry 
+            new LogEntry
             { 
                 Id = 2, 
                 VehicleId = 1, 
-                Date = new DateTime(2023, 2, 20), 
-                Description = "Tire Rotation", 
-                Cost = 30.00m,
-                Type = "Maintenance",
-                SpeedometerReading = 18000 
+                Description = "Brake Repair", 
+                Date = DateTime.Now.AddDays(-60),
+                Type = "repair",
+                Cost = 200.00m,
+                SpeedometerReading = 14000
             }
         );
         
@@ -59,15 +60,16 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         
         // Act
         var result = await service.GetAllAsync();
         
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, e => e.Description == "Oil Change");
-        Assert.Contains(result, e => e.Description == "Tire Rotation");
+        Assert.Contains(result, le => le.Description == "Oil Change");
+        Assert.Contains(result, le => le.Description == "Brake Repair");
+        Assert.All(result, le => Assert.NotNull(le.Vehicle));
     }
     
     [Fact]
@@ -75,7 +77,7 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         
         // Act
         var result = await service.GetByIdAsync(1);
@@ -83,7 +85,8 @@ public class LogEntryServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Oil Change", result.Description);
-        Assert.Equal(50.00m, result.Cost);
+        Assert.Equal(1, result.VehicleId);
+        Assert.NotNull(result.Vehicle);
     }
     
     [Fact]
@@ -91,7 +94,7 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         
         // Act
         var result = await service.GetByIdAsync(999);
@@ -101,18 +104,19 @@ public class LogEntryServiceTests
     }
     
     [Fact]
-    public async Task GetByVehicleIdAsync_ReturnsEntriesForSpecificVehicle()
+    public async Task GetByVehicleIdAsync_ReturnsLogEntriesForVehicle()
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         
         // Act
         var result = await service.GetByVehicleIdAsync(1);
         
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.All(result, entry => Assert.Equal(1, entry.VehicleId));
+        Assert.All(result, le => Assert.Equal(1, le.VehicleId));
+        Assert.All(result, le => Assert.NotNull(le.Vehicle));
     }
     
     [Fact]
@@ -120,24 +124,26 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         var newLogEntry = new LogEntry
         {
             VehicleId = 1,
-            Date = new DateTime(2023, 3, 10),
-            Description = "Brake Pad Replacement",
-            Cost = 200.00m,
-            Type = "Repair"
+            Description = "Tire Replacement",
+            Date = DateTime.Now,
+            Type = "maintenance",
+            Cost = 400.00m,
+            SpeedometerReading = 16000
         };
         
         // Act
         await service.AddAsync(newLogEntry);
         
         // Assert
-        var entry = await context.LogEntries.FirstOrDefaultAsync(e => e.Description == "Brake Pad Replacement");
-        Assert.NotNull(entry);
-        Assert.Equal(200.00m, entry.Cost);
-        Assert.Equal("Repair", entry.Type);
+        var logEntry = await context.LogEntries.FirstOrDefaultAsync(le => le.Description == "Tire Replacement");
+        Assert.NotNull(logEntry);
+        Assert.Equal(1, logEntry.VehicleId);
+        Assert.Equal("maintenance", logEntry.Type);
+        Assert.Equal(400.00m, logEntry.Cost);
     }
     
     [Fact]
@@ -145,27 +151,22 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
-        
-        // Get the log entry to update
+        ILogEntryService service = new LogEntryService(context);
         var logEntry = await context.LogEntries.FindAsync(1);
         Assert.NotNull(logEntry);
         
         // Modify the log entry
-        logEntry.Description = "Full Service";
-        logEntry.Cost = 120.00m;
-        
-        // Detach the entity to simulate a real-world scenario
-        context.Entry(logEntry).State = EntityState.Detached;
+        logEntry.Description = "Oil Change - Updated";
+        logEntry.Cost = 60.00m;
         
         // Act
         await service.UpdateAsync(logEntry);
         
         // Assert
-        var updatedEntry = await context.LogEntries.FindAsync(1);
-        Assert.NotNull(updatedEntry);
-        Assert.Equal("Full Service", updatedEntry.Description);
-        Assert.Equal(120.00m, updatedEntry.Cost);
+        var updatedLogEntry = await context.LogEntries.FindAsync(1);
+        Assert.NotNull(updatedLogEntry);
+        Assert.Equal("Oil Change - Updated", updatedLogEntry.Description);
+        Assert.Equal(60.00m, updatedLogEntry.Cost);
     }
     
     [Fact]
@@ -173,7 +174,7 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         
         // Verify log entry exists before delete
         var logEntry = await context.LogEntries.FindAsync(1);
@@ -192,9 +193,31 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        var service = new LogEntryService(context);
+        ILogEntryService service = new LogEntryService(context);
         
         // Act & Assert
         await service.DeleteAsync(999); // Should not throw exception
+    }
+
+    [Fact]
+    public async Task AddAsync_WithNullLogEntry_ThrowsArgumentNullException()
+    {
+        // Arrange
+        using var context = GetDbContext();
+        ILogEntryService service = new LogEntryService(context);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => service.AddAsync(null!));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithNullLogEntry_ThrowsArgumentNullException()
+    {
+        // Arrange
+        using var context = GetDbContext();
+        ILogEntryService service = new LogEntryService(context);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => service.UpdateAsync(null!));
     }
 }

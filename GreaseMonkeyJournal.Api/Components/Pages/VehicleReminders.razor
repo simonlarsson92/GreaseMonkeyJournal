@@ -1,5 +1,6 @@
 @page "/vehicle/{VehicleId:int}/reminders"
 @using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
 
 <PageTitle>Reminders</PageTitle>
 
@@ -160,8 +161,8 @@
 
 @code {
     [Parameter] public int VehicleId { get; set; }
-    [Inject] private ReminderService ReminderService { get; set; } = default!;
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 

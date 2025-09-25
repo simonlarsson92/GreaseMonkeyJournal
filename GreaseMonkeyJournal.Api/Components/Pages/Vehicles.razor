@@ -73,7 +73,7 @@
 </div>
 
 @code {
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
     private List<Vehicle> vehicles = new();
 
     protected override async Task OnInitializedAsync()
