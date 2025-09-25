@@ -10,45 +10,47 @@ assignees: ''
 #Title
 
 ## Background
-Currently, our application may be tightly coupling components and services, making the codebase difficult to test and maintain. Implementing proper dependency injection with interfaces will improve the architecture, testability, and maintainability of the codebase.
+Describe the current problem or limitation.  
+**Example:**  
+> Our logging system currently writes logs directly to text files with no rotation or formatting. This makes it difficult to search logs, integrate with monitoring tools, or analyze errors.
 
 ## Objective
-Refactor the current service implementation to use a proper dependency injection (DI) pattern with interfaces, enhancing testability and maintainability.
+State the high-level goal of the change.  
+**Example:**  
+> Introduce a structured logging framework (e.g., Serilog, Winston, or Log4j) to provide consistent, queryable logs that can be integrated with external monitoring systems.
 
 ## Requirements
-- **Service Interfaces**
-  - Create interfaces for all existing services
-  - Each interface defines the contract that implementing classes must fulfill
-  - Place interfaces in an appropriate folder structure (e.g., `/Interfaces` or alongside implementations)
-
-- **Dependency Injection Container**
-  - Implement a DI container (built-in or third-party as appropriate for the tech stack)
-  - Configure service registration with correct lifetime scopes (`singleton`, `transient`, `scoped`)
-  - Use constructor injection pattern for dependencies
-
-- **Service Implementation**
-  - Refactor existing services to implement their respective interfaces
-  - Remove direct instantiation of dependencies in favor of injected dependencies
-  - Ensure services respect the **Dependency Inversion Principle**
-
+List the detailed tasks or changes needed.  
+**Examples:**
+- **System Design**
+  - Replace plain text logging with structured JSON logs
+  - Support configurable log levels (Debug, Info, Error)
+- **Integration**
+  - Send logs to a central service (e.g., ELK, Datadog, CloudWatch)
+- **Code Changes**
+  - Refactor existing logging calls to use the new framework
+  - Add middleware to automatically log HTTP requests and responses
 - **Testing**
-  - Create unit tests for each service using mock implementations of dependencies
-  - Add integration tests to verify DI configuration
-  - Ensure test coverage for critical service functionality
+  - Verify logs are correctly formatted
+  - Ensure sensitive data (like passwords) is never logged
 
 ## Benefits
-- Improved testability (via mockable dependencies)
-- Clearer separation of concerns
-- More maintainable codebase with reduced coupling
-- Better adherence to **SOLID** principles
+Explain why this work matters.  
+**Example:**  
+- Developers can filter logs more effectively during debugging  
+- Ops teams can monitor application health with alerts  
+- Easier compliance with auditing requirements  
 
 ## Acceptance Criteria
-- [ ] All services have corresponding interfaces  
-- [ ] Dependency injection container is properly configured  
-- [ ] Unit tests demonstrate services can be tested in isolation  
-- [ ] Integration tests verify proper resolution of dependencies  
-- [ ] No direct instantiation of services (except in DI configuration)  
-- [ ] Documentation for the DI approach is added to the project  
+Checklist of what must be true for the issue to be considered complete.  
+**Examples:**
+- [ ] All log output uses the new structured logging framework  
+- [ ] Configurable log levels are respected in dev, staging, and prod  
+- [ ] Logs integrate successfully with monitoring system  
+- [ ] Unit tests and integration tests verify critical functionality  
+- [ ] Documentation updated with instructions on configuring log levels  
 
 ## Additional Notes
-Consider reviewing the current architecture to identify the most critical services first. This may be an **incremental process** rather than a single large refactoring.
+Include any context, risks, or phased rollout ideas.  
+**Example:**  
+> Begin rollout by updating logging in authentication and payment services before applying changes to the entire application.
