@@ -1,6 +1,6 @@
 using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
-using GreaseMonkeyJournal.Api.Components.Services;
+using GreaseMonkeyJournal.Api.Extensions;
 using GreaseMonkeyJournal.Components;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,12 +21,12 @@ builder.Services.AddDbContext<VehicleLogDbContext>(options =>
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("MariaDbConnection"))
     ));
 
-// Add services to the container.
+// Add Blazor components
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddScoped<VehicleService>();
-builder.Services.AddScoped<LogEntryService>();
-builder.Services.AddScoped<ReminderService>();
+
+// Add application services using extension method
+builder.Services.AddApplicationServices();
 
 var app = builder.Build();
 

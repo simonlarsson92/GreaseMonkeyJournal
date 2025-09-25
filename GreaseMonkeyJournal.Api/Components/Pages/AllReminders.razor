@@ -1,5 +1,6 @@
 @page "/reminders"
 @using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
 
 <PageTitle>All Reminders</PageTitle>
 
@@ -80,8 +81,8 @@
 </div>
 
 @code {
-    [Inject] private ReminderService ReminderService { get; set; } = default!;
-    [Inject] private VehicleService VehicleService { get; set; } = default!;
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
 
     private List<Reminder> remindersList = new();
     private List<Reminder> _sortedReminders = new();
