@@ -41,13 +41,33 @@ fi
 echo -e "\033[33mINFO: Stopping and removing existing containers...\033[0m"
 docker-compose down
 
+# Get the actual volume name used by docker-compose
+echo -e "\033[33mINFO: Finding MariaDB volume...\033[0m"
+volume_name=""
+if command -v jq >/dev/null 2>&1; then
+    # Try to get project name from docker-compose config if jq is available
+    project_name=$(docker-compose config --format json 2>/dev/null | jq -r '.name // empty')
+    if [[ -n "$project_name" ]]; then
+        volume_name="${project_name}_mariadb_data"
+    fi
+fi
+
+# Fallback: try to find volume with mariadb_data in the name
+if [[ -z "$volume_name" ]]; then
+    echo -e "\033[33mWARNING: Could not determine project name, trying fallback method...\033[0m"
+    volume_name=$(docker volume ls --format "{{.Name}}" | grep mariadb_data | head -n 1)
+fi
+
 # Remove MariaDB volume to reset database
-echo -e "\033[33mINFO: Removing MariaDB volume to reset database...\033[0m"
-volume_name="greasemonkeyjournal_mariadb_data"
-if docker volume rm "$volume_name" >/dev/null 2>&1; then
-    echo -e "\033[32mSUCCESS: Volume '$volume_name' removed successfully\033[0m"
+if [[ -n "$volume_name" ]]; then
+    echo -e "\033[33mINFO: Removing MariaDB volume '$volume_name' to reset database...\033[0m"
+    if docker volume rm "$volume_name" >/dev/null 2>&1; then
+        echo -e "\033[32mSUCCESS: Volume '$volume_name' removed successfully\033[0m"
+    else
+        echo -e "\033[34mINFO: Volume '$volume_name' was not found (this is normal)\033[0m"
+    fi
 else
-    echo -e "\033[34mINFO: Volume '$volume_name' was not found (this is normal)\033[0m"
+    echo -e "\033[34mINFO: No MariaDB volume found to remove (this is normal for first run)\033[0m"
 fi
 
 # Start services with fresh build

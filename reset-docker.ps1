@@ -43,14 +43,41 @@ if ($confirm -ne 'y' -and $confirm -ne 'Y') {
 Write-Host "INFO: Stopping and removing existing containers..." -ForegroundColor Yellow
 docker-compose down
 
-# Remove MariaDB volume to reset database
-Write-Host "INFO: Removing MariaDB volume to reset database..." -ForegroundColor Yellow
-$volumeName = "greasemonkeyjournal_mariadb_data"
+# Get the actual volume name used by docker-compose
+Write-Host "INFO: Finding MariaDB volume..." -ForegroundColor Yellow
+$volumeName = ""
 try {
-    docker volume rm $volumeName 2>$null
-    Write-Host "SUCCESS: Volume '$volumeName' removed successfully" -ForegroundColor Green
+    # Get the project name from docker-compose
+    $projectName = docker-compose config --format json | ConvertFrom-Json | Select-Object -ExpandProperty name
+    if ($projectName) {
+        $volumeName = "${projectName}_mariadb_data"
+    } else {
+        # Fallback: try to find volume with mariadb_data in the name
+        $volumes = docker volume ls --format "{{.Name}}" | Where-Object { $_ -like "*mariadb_data*" }
+        if ($volumes) {
+            $volumeName = $volumes[0]
+        }
+    }
 } catch {
-    Write-Host "INFO: Volume '$volumeName' was not found (this is normal)" -ForegroundColor Blue
+    Write-Host "WARNING: Could not determine project name, trying fallback method..." -ForegroundColor Yellow
+    # Fallback: try to find volume with mariadb_data in the name
+    $volumes = docker volume ls --format "{{.Name}}" | Where-Object { $_ -like "*mariadb_data*" }
+    if ($volumes) {
+        $volumeName = $volumes[0]
+    }
+}
+
+# Remove MariaDB volume to reset database
+if ($volumeName) {
+    Write-Host "INFO: Removing MariaDB volume '$volumeName' to reset database..." -ForegroundColor Yellow
+    try {
+        docker volume rm $volumeName 2>$null
+        Write-Host "SUCCESS: Volume '$volumeName' removed successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "INFO: Volume '$volumeName' was not found (this is normal)" -ForegroundColor Blue
+    }
+} else {
+    Write-Host "INFO: No MariaDB volume found to remove (this is normal for first run)" -ForegroundColor Blue
 }
 
 # Start services with fresh build
