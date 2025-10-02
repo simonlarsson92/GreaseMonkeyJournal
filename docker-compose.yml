@@ -3,11 +3,10 @@ services:
     image: mariadb:11.0
     container_name: greasemonkey-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: yourpassword
-      MYSQL_DATABASE: database
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: yourpassword
-      MYSQL_ROOT_HOST: '%'
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     command: --default-authentication-plugin=mysql_native_password --bind-address=0.0.0.0
     ports:
       - "3306:3306"
@@ -17,7 +16,7 @@ services:
     networks:
       - greasemonkey-network
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "appuser", "-pyourpassword"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,8 +33,9 @@ services:
       mariadb:
         condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__MariaDbConnection=server=mariadb;port=3306;database=database;user=appuser;password=yourpassword;Connect Timeout=30;Command Timeout=60;Default Command Timeout=60;
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ConnectionStrings__MariaDbConnection=server=${DB_SERVER};port=${DB_PORT};database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD};Connect Timeout=${DB_CONNECTION_TIMEOUT};Command Timeout=${DB_COMMAND_TIMEOUT};Default Command Timeout=${DB_COMMAND_TIMEOUT};
+      - AppSettings__ApplicationTitle=${APP_TITLE}
     networks:
       - greasemonkey-network
 

@@ -6,6 +6,8 @@
     <ProjectGuid>81dded9d-158b-e303-5f62-77a2896d2a5a</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".env" />
+    <None Include=".env.example" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
@@ -15,5 +17,7 @@
     <None Include="docker-dev.sh" />
     <None Include="init.sql" />
     <None Include="reset-docker.ps1" />
+    <None Include="reset-docker.sh" />
+    <None Include="SECURITY.md" />
   </ItemGroup>
 </Project>

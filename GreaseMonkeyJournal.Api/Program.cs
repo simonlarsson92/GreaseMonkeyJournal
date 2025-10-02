@@ -67,7 +67,7 @@ using (var scope = app.Services.CreateScope())
         try
         {
             await context.Database.CanConnectAsync();
-            context.Database.Migrate();
+            await context.Database.MigrateAsync();
             break;
         }
         catch (Exception ex) when (i < maxRetries - 1)
