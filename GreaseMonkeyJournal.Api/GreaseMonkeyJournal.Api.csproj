@@ -8,6 +8,7 @@
     <AssemblyName>GreaseMonkeyJournal</AssemblyName>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+    <UserSecretsId>1d71a1a1-cf0c-48bd-b5af-3456f53d7af7</UserSecretsId>
   </PropertyGroup>
 
 

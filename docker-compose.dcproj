@@ -15,6 +15,7 @@
     <None Include=".dockerignore" />
     <None Include="docker-dev.ps1" />
     <None Include="docker-dev.sh" />
+    <None Include="docs\DATABASE_INIT.md" />
     <None Include="init.sql" />
     <None Include="reset-docker.ps1" />
     <None Include="reset-docker.sh" />
