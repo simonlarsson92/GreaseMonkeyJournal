@@ -235,6 +235,9 @@ public class LogEntryService : ILogEntryService
         if (entry == null)
             throw new ArgumentNullException(nameof(entry));
 
+        if (entry.Id <= 0)
+            throw new ArgumentException("Reminder ID must be a positive integer.", nameof(entry.Id));
+
         try
         {
             // Clear navigation property to avoid relationship conflicts

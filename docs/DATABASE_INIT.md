@@ -44,11 +44,11 @@ MariaDB Docker container automatically:
 
 ## Security Features
 
-? **No Hardcoded Passwords**: All credentials come from environment variables  
-? **Least Privilege**: Application user only has access to the application database  
-? **Environment File Exclusion**: `.env` files are automatically ignored by Git  
-? **Docker Network Isolation**: Database only accessible within Docker network  
-? **Root Access Control**: Root user properly configured but restricted  
+- **No Hardcoded Passwords**: All credentials come from environment variables  
+- **Least Privilege**: Application user only has access to the application database  
+- **Environment File Exclusion**: `.env` files are automatically ignored by Git  
+- **Docker Network Isolation**: Database only accessible within Docker network  
+- **Root Access Control**: Root user properly configured but restricted  
 
 ## Usage Instructions
 
