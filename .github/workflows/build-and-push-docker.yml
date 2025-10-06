@@ -53,7 +53,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./GreaseMonkeyJournal.Api/Dockerfile
         push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
         tags: ${{ steps.tags.outputs.tags }}
         cache-from: type=gha
