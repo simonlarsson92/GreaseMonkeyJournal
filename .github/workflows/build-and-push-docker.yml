@@ -24,16 +24,30 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ secrets.DOCKERHUB_USERNAME }}/greasemonkeyjournal
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+    - name: Generate tags
+      id: tags
+      run: |
+        # Get short SHA
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+        
+        # Set base image name
+        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/greasemonkeyjournal"
+        
+        # Generate tags based on event type
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+          # For master branch pushes
+          TAGS="${IMAGE_NAME}:latest,${IMAGE_NAME}:${SHORT_SHA}"
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # For pull requests
+          TAGS="${IMAGE_NAME}:pr-${{ github.event.number }}"
+        else
+          # For other branch pushes
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          TAGS="${IMAGE_NAME}:${BRANCH_NAME}-${SHORT_SHA}"
+        fi
+        
+        echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+        echo "Generated tags: ${TAGS}"
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -41,7 +55,6 @@ jobs:
         context: .
         file: ./Dockerfile
         push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ steps.tags.outputs.tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
