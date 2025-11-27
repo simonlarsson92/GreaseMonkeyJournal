@@ -10,14 +10,12 @@
     --primary-color: #2F5233;
     --secondary-color: #2F5233;
     --success-color: #3C8C57;
-    --warning-color: #E2B84C;
+    --warning-color: #4a4949;
     --danger-color: #4B6B47;
     --info-color: #3C8C57;
-
     /* Semantic / Neutral Palette */
     --light-color: #F4E9D8;
     --dark-color: #2F1D12;
-
     /* Backgrounds */
     --bs-body-bg: #F4E9D8;
     --bs-secondary-bg: #FFFFFF;
@@ -25,19 +23,15 @@
     --sidebar-bg: #E9D9C0;
     --navbar-bg: #f3e8d6;
     --card-bg: #FFFFFF;
-
     /* Text & Borders */
     --bs-body-color: #444444;
     --bs-border-color: #D4C5B0;
     --sidebar-text: #6B4226;
-    --heading-color: #2F1D12;
-
+    --heading-color: #000000;
     /* Effects */
     --card-shadow: rgba(107, 66, 38, 0.15);
-
     /* Layout */
     --sidebar-width: 240px;
-
     /* Sidebar link state backgrounds */
     --sidebar-link-hover-bg: linear-gradient(135deg, rgba(226, 184, 76, 0.10), rgba(204, 107, 62, 0.10));
     --sidebar-link-active-bg: linear-gradient(135deg, rgba(226, 184, 76, 0.20), rgba(204, 107, 62, 0.15));
@@ -312,6 +306,12 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 }
 
 .card-header + .card-body { border-top-left-radius: 0; border-top-right-radius: 0; }
+
+/* Dark mode card header override */
+[data-bs-theme="dark"] .card-header {
+    background: linear-gradient(135deg, rgba(107, 66, 38, 0.3), rgba(204, 107, 62, 0.3)), 
+                var(--bs-tertiary-bg);
+}
 
 /* Card variants */
 .card.reminder-card .card-header { background: linear-gradient(135deg, var(--warning-color), #f39c12); }
