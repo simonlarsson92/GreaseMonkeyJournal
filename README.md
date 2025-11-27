@@ -89,6 +89,7 @@ docker-compose up -d --build
 - **Web Application**: http://localhost:8080
 - **Health Check**: http://localhost:8080/health
 - **Database**: MariaDB accessible on localhost:3306
+- **MailDev (Development)**: http://localhost:1080 - View all emails sent by the application
 
 ## Database Schema
 
@@ -261,7 +262,33 @@ The application includes an automated email notification system that sends daily
 
 Email notifications require SMTP server configuration. The system supports Gmail, Outlook, and other SMTP providers.
 
-#### Gmail Setup
+#### Development Setup (MailDev)
+
+For development, the Docker setup includes **MailDev** - a simple SMTP server that catches all emails without actually sending them. This is perfect for testing email notifications.
+
+**Default Configuration (already in `.env.example`):**
+```env
+SMTP_HOST=maildev
+SMTP_PORT=1025
+SMTP_ENABLE_SSL=false
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=noreply@greasemonkey.local
+SMTP_FROM_NAME=Grease Monkey Journal
+```
+
+**Access the MailDev Web UI:**
+- Navigate to http://localhost:1080
+- All emails sent by the application will appear here
+- No real emails are sent - perfect for testing!
+
+**Benefits:**
+- Test email notifications without sending real emails
+- View email content and formatting
+- No need to configure Gmail/Outlook credentials during development
+- Automatically started with `docker-compose up`
+
+#### Gmail Setup (Production)
 
 1. **Enable 2-Step Verification** in your Google Account
 2. **Generate an App Password**:

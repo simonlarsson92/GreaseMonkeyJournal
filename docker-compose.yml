@@ -35,6 +35,18 @@ services:
     networks:
       - greasemonkey-network
 
+  maildev:
+    image: maildev/maildev
+    container_name: greasemonkey-maildev
+    ports:
+      - "1080:1080"  # Web UI
+      - "1025:1025"  # SMTP Server
+    networks:
+      - greasemonkey-network
+    environment:
+      - MAILDEV_WEB_PORT=1080
+      - MAILDEV_SMTP_PORT=1025
+
   greasemonkeyjournal.api:
     image: ${DOCKER_REGISTRY-}greasemonkeyjournalapi
     build:
@@ -46,6 +58,8 @@ services:
       mariadb:
         condition: service_healthy
       seq:
+        condition: service_started
+      maildev:
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
