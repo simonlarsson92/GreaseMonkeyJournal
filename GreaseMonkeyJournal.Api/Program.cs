@@ -1,5 +1,6 @@
 using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
+using GreaseMonkeyJournal.Api.Components.Services;
 using GreaseMonkeyJournal.Api.Extensions;
 using GreaseMonkeyJournal.Components;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,10 @@ try
     builder.Services.Configure<AppSettings>(
         builder.Configuration.GetSection(AppSettings.SectionName));
 
+    // Configure EmailSettings
+    builder.Services.Configure<EmailSettings>(
+        builder.Configuration.GetSection(EmailSettings.SectionName));
+
     // Add health checks
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<VehicleLogDbContext>();
@@ -50,6 +55,9 @@ try
 
     // Add application services using extension method
     builder.Services.AddApplicationServices();
+
+    // Add background service for daily reminder notifications
+    builder.Services.AddHostedService<ReminderNotificationBackgroundService>();
 
     var app = builder.Build();
 

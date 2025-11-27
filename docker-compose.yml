@@ -53,6 +53,13 @@ services:
       - AppSettings__ApplicationTitle=${APP_TITLE}
       - Seq__ServerUrl=${SEQ_URL}
       - Seq__ApiKey=${SEQ_API_KEY}
+      - EmailSettings__SmtpHost=${SMTP_HOST}
+      - EmailSettings__SmtpPort=${SMTP_PORT}
+      - EmailSettings__EnableSsl=${SMTP_ENABLE_SSL}
+      - EmailSettings__SmtpUsername=${SMTP_USERNAME}
+      - EmailSettings__SmtpPassword=${SMTP_PASSWORD}
+      - EmailSettings__FromEmail=${SMTP_FROM_EMAIL}
+      - EmailSettings__FromName=${SMTP_FROM_NAME}
     networks:
       - greasemonkey-network
 

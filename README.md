@@ -110,6 +110,7 @@ The application includes a comprehensive schema for vehicle maintenance tracking
 - Parts tracking and costs
 - Fuel consumption analysis
 - Service reminders and scheduling
+- Email notification system for upcoming reminders
 - Categorized maintenance types
 
 ## Docker Architecture
@@ -251,6 +252,76 @@ docker-compose logs -f seq
 2. Use the search bar to filter logs
 3. Click on any log event for detailed information
 4. Use the "Signals" feature to create reusable queries
+
+## Email Notification Setup
+
+The application includes an automated email notification system that sends daily reminders at 7:00 AM for upcoming vehicle maintenance.
+
+### Email Configuration
+
+Email notifications require SMTP server configuration. The system supports Gmail, Outlook, and other SMTP providers.
+
+#### Gmail Setup
+
+1. **Enable 2-Step Verification** in your Google Account
+2. **Generate an App Password**:
+   - Visit https://myaccount.google.com/apppasswords
+   - Select "Mail" and your device
+   - Copy the generated password
+3. **Update your `.env` file**:
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_ENABLE_SSL=true
+   SMTP_USERNAME=your-email@gmail.com
+   SMTP_PASSWORD=your-16-digit-app-password
+   SMTP_FROM_EMAIL=your-email@gmail.com
+   SMTP_FROM_NAME=Grease Monkey Journal
+   ```
+
+#### Outlook/Hotmail Setup
+
+1. **Update your `.env` file**:
+   ```env
+   SMTP_HOST=smtp-mail.outlook.com
+   SMTP_PORT=587
+   SMTP_ENABLE_SSL=true
+   SMTP_USERNAME=your-email@outlook.com
+   SMTP_PASSWORD=your-password
+   SMTP_FROM_EMAIL=your-email@outlook.com
+   SMTP_FROM_NAME=Grease Monkey Journal
+   ```
+
+### Notification Preferences
+
+After configuring SMTP settings, users can manage notification preferences through the Settings page:
+
+1. Navigate to **Settings** in the application menu
+2. Enter your email address
+3. Enable notifications and choose which reminders to receive:
+   - **7 days before** - Advance warning
+   - **1 day before** - Last-minute reminder
+   - **Due today** - Same-day notification
+4. Save your preferences
+
+### Notification Schedule
+
+- Notifications are sent daily at **7:00 AM** (server time)
+- Emails are sent only when reminders match the configured timeframes
+- Multiple reminders are consolidated into a single email per day
+
+### Troubleshooting Email Notifications
+
+If emails are not being delivered:
+
+1. **Check SMTP configuration** in your `.env` file
+2. **Verify credentials** - Test login to your email provider
+3. **Check application logs**:
+   ```bash
+   docker-compose logs -f greasemonkeyjournal.api | grep -i "email\|smtp\|reminder"
+   ```
+4. **For Gmail** - Ensure App Password is used, not regular password
+5. **Check spam folder** - Initial emails may be filtered
 
 ## Development Setup
 
