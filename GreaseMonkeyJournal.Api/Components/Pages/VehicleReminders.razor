@@ -75,7 +75,7 @@
                                                     }
                                                 </td>
                                                 <td>
-                                                    <div class="btn-group" role="group">
+                                                    <div class="d-flex gap-2">
                                                         @if (!reminder.IsCompleted)
                                                         {
                                                             <button type="button" class="btn btn-sm btn-success" @onclick="() => CompleteReminderAsync(reminder)">

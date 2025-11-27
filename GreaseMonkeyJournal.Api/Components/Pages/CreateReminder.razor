@@ -1,0 +1,152 @@
+@page "/create-reminder"
+@using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
+
+<PageTitle>Create Reminder</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Create a New Reminder</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (!vehicles.Any())
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            You need to create a vehicle first before adding reminders.
+                            <a href="/create-vehicle" class="alert-link">Create a vehicle</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="reminder" OnValidSubmit="CreateReminderHandler">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="vehicleId" class="form-label">Vehicle *</label>
+                                <select id="vehicleId" class="form-select" @bind="reminder.VehicleId" @bind:after="OnVehicleSelected" required>
+                                    <option value="0">Select a vehicle...</option>
+                                    @foreach (var vehicle in vehicles)
+                                    {
+                                        <option value="@vehicle.Id">@vehicle.Year @vehicle.Make @vehicle.Model (@vehicle.Registration)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description *</label>
+                                <input type="text" class="form-control" id="description" @bind="reminder.Description" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Type *</label>
+                                <select id="type" class="form-select" @bind="reminder.Type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="repair">Repair</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="dueDate" class="form-label">Due Date *</label>
+                                <input type="date" class="form-control" id="dueDate" @bind="reminder.DueDate" @bind:format="yyyy-MM-dd" required />
+                            </div>
+
+                            @if (selectedVehicle != null && selectedVehicle.SpeedometerType != SpeedometerType.None)
+                            {
+                                <div class="mb-3">
+                                    <label for="dueReading" class="form-label">Due @GetSpeedometerLabel(selectedVehicle.SpeedometerType)</label>
+                                    <input type="number" class="form-control" id="dueReading" @bind="reminder.DueSpeedometerReading" step="0.01" />
+                                </div>
+                            }
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-circle me-2"></i>Create Reminder
+                            </button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                Reminder created successfully!
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private Reminder reminder = new() { DueDate = DateTime.Today.AddDays(30) };
+    private List<Vehicle> vehicles = new();
+    private Vehicle? selectedVehicle;
+    private bool isLoading = true;
+    private bool showSuccessMessage = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        vehicles = await VehicleService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private void OnVehicleSelected()
+    {
+        selectedVehicle = vehicles.FirstOrDefault(v => v.Id == reminder.VehicleId);
+    }
+
+    private async Task CreateReminderHandler()
+    {
+        if (reminder.VehicleId == 0)
+        {
+            return;
+        }
+
+        reminder.IsCompleted = false;
+        await ReminderService.AddReminderAsync(reminder);
+        showSuccessMessage = true;
+        reminder = new() { DueDate = DateTime.Today.AddDays(30) };
+        selectedVehicle = null;
+        StateHasChanged();
+
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+    private string GetSpeedometerLabel(SpeedometerType speedometerType)
+    {
+        return speedometerType switch
+        {
+            SpeedometerType.KM => "Kilometers",
+            SpeedometerType.Hours => "Hours",
+            _ => "Reading"
+        };
+    }
+}

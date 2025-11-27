@@ -1,55 +1,253 @@
 @page "/"
+@using GreaseMonkeyJournal.Api.Components.Models
+@using GreaseMonkeyJournal.Api.Components.Services
 
 <PageTitle>Grease Monkey Journal</PageTitle>
 
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="jumbotron rounded p-5 mb-4">
-                <h1 class="display-4 text-center">Welcome to Grease Monkey Journal</h1>
-                <p class="lead text-center">Keep track of your vehicle maintenance and repairs in one convenient location.</p>
-                <p class="text-center">Use the navigation menu to get started with managing your vehicles and maintenance records.</p>
-                <div class="text-center">
-                    <a class="btn btn-primary btn-lg" href="/create-vehicle" role="button">
-                        <i class="bi bi-plus-circle me-2"></i>Create Your First Vehicle
+            @if (!vehicles.Any())
+            {
+                <!-- Welcome Banner - shown when no vehicles exist -->
+                <div class="jumbotron rounded p-5 mb-4">
+                    <h1 class="display-4 text-center">Welcome to Grease Monkey Journal</h1>
+                    <p class="lead text-center">Keep track of your vehicle maintenance and repairs in one convenient location.</p>
+                    <p class="text-center">Use the navigation menu to get started with managing your vehicles and maintenance records.</p>
+                    <div class="text-center">
+                        <a class="btn btn-primary btn-lg" href="/create-vehicle" role="button">
+                            <i class="bi bi-plus-circle me-2"></i>Create Your First Vehicle
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-car-front text-primary" style="font-size: 3rem;"></i>
+                                <h5 class="card-title mt-3">Manage Vehicles</h5>
+                                <p class="card-text">Add and organize your vehicles with detailed information.</p>
+                                <a href="/vehicles" class="btn btn-primary">View Vehicles</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-journal-text text-success" style="font-size: 3rem;"></i>
+                                <h5 class="card-title mt-3">Track Maintenance</h5>
+                                <p class="card-text">Log repairs, maintenance, and service records.</p>
+                                <a href="/vehicle/logs" class="btn btn-primary">View Logs</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-bell text-warning" style="font-size: 3rem;"></i>
+                                <h5 class="card-title mt-3">Set Reminders</h5>
+                                <p class="card-text">Never miss important maintenance with reminders.</p>
+                                <a href="/reminders" class="btn btn-primary">View Reminders</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- Dashboard - shown when vehicles exist -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Dashboard</h2>
+                    <a href="/create-vehicle" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Add Vehicle
                     </a>
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-car-front text-primary" style="font-size: 3rem;"></i>
-                            <h5 class="card-title mt-3">Manage Vehicles</h5>
-                            <p class="card-text">Add and organize your vehicles with detailed information.</p>
-                            <a href="/vehicles" class="btn btn-primary">View Vehicles</a>
+                <!-- Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-car-front text-primary" style="font-size: 2.5rem;"></i>
+                                <h3 class="mt-2">@vehicles.Count</h3>
+                                <p class="text-muted mb-0">Total Vehicles</p>
+                                <a href="/vehicles" class="btn btn-sm btn-outline-primary mt-2">View All</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-journal-text text-success" style="font-size: 2.5rem;"></i>
+                                <h3 class="mt-2">@logEntries.Count</h3>
+                                <p class="text-muted mb-0">Maintenance Records</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <i class="bi bi-bell text-warning" style="font-size: 2.5rem;"></i>
+                                <h3 class="mt-2">@activeReminders.Count</h3>
+                                <p class="text-muted mb-0">Active Reminders</p>
+                                <a href="/reminders" class="btn btn-sm btn-outline-warning mt-2">View All</a>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-journal-text text-success" style="font-size: 3rem;"></i>
-                            <h5 class="card-title mt-3">Track Maintenance</h5>
-                            <p class="card-text">Log repairs, maintenance, and service records.</p>
-                            <a href="/vehicle/logs" class="btn btn-primary">View Logs</a>
+
+                <div class="row">
+                    <!-- My Vehicles -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">My Vehicles</h5>
+                            </div>
+                            <div class="card-body">
+                                @if (vehicles.Any())
+                                {
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var vehicle in vehicles.Take(5))
+                                        {
+                                            <a href="/vehicle/@vehicle.Id/logs" class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">@vehicle.Year @vehicle.Make @vehicle.Model</h6>
+                                                        <small class="text-muted">@vehicle.Registration</small>
+                                                    </div>
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </div>
+                                            </a>
+                                        }
+                                    </div>
+                                    @if (vehicles.Count > 5)
+                                    {
+                                        <div class="text-center mt-3">
+                                            <a href="/vehicles" class="btn btn-sm btn-outline-primary">View All Vehicles</a>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Maintenance -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Recent Maintenance</h5>
+                            </div>
+                            <div class="card-body">
+                                @if (recentLogEntries.Any())
+                                {
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var log in recentLogEntries)
+                                        {
+                                            <div class="list-group-item">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1">@log.Description</h6>
+                                                    <small class="text-muted">@FormatDate(log.Date)</small>
+                                                </div>
+                                                <small class="text-muted">@log.Vehicle?.Year @log.Vehicle?.Make @log.Vehicle?.Model</small>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted text-center mb-0">No maintenance records yet</p>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-bell text-warning" style="font-size: 3rem;"></i>
-                            <h5 class="card-title mt-3">Set Reminders</h5>
-                            <p class="card-text">Never miss important maintenance with reminders.</p>
-                            <a href="/reminders" class="btn btn-primary">View Reminders</a>
+
+                <!-- Upcoming Reminders -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Upcoming Reminders</h5>
+                            </div>
+                            <div class="card-body">
+                                @if (upcomingReminders.Any())
+                                {
+                                    <div class="list-group list-group-flush">
+                                        @foreach (var reminder in upcomingReminders)
+                                        {
+                                            var isOverdue = reminder.DueDate < DateTime.Today;
+                                            <a href="/vehicle/@reminder.VehicleId/reminders" class="list-group-item list-group-item-action @(isOverdue ? "list-group-item-danger" : "")">
+                                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">@reminder.Description</h6>
+                                                        <small class="text-muted">@reminder.Vehicle?.Year @reminder.Vehicle?.Make @reminder.Vehicle?.Model</small>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <span class="badge @(isOverdue ? "bg-danger" : "bg-secondary")">
+                                                            @(isOverdue ? "Overdue" : "Due") @FormatDateLong(reminder.DueDate)
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted text-center mb-0">No upcoming reminders</p>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
 </div>
 
-@code { }
+@code {
+    [Inject] private IVehicleService VehicleService { get; set; } = default!;
+    [Inject] private ILogEntryService LogEntryService { get; set; } = default!;
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    
+    private List<Vehicle> vehicles = new();
+    private List<LogEntry> logEntries = new();
+    private List<LogEntry> recentLogEntries = new();
+    private List<Reminder> allReminders = new();
+    private List<Reminder> activeReminders = new();
+    private List<Reminder> upcomingReminders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load all data
+        vehicles = await VehicleService.GetAllAsync();
+        logEntries = await LogEntryService.GetAllAsync();
+        allReminders = await ReminderService.GetAllRemindersWithVehicleAsync();
+        
+        // Process data for dashboard
+        recentLogEntries = logEntries
+            .OrderByDescending(l => l.Date)
+            .Take(5)
+            .ToList();
+        
+        activeReminders = allReminders
+            .Where(r => !r.IsCompleted)
+            .ToList();
+        
+        upcomingReminders = activeReminders
+            .OrderBy(r => r.DueDate)
+            .Take(5)
+            .ToList();
+    }
+    
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("MMM dd") ?? "N/A";
+    }
+    
+    private string FormatDateLong(DateTime date)
+    {
+        return date.ToString("MMM dd, yyyy");
+    }
+}

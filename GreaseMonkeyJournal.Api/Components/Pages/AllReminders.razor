@@ -9,7 +9,12 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">All Reminders</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">All Reminders</h5>
+                        <a href="/create-reminder" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Add Reminder
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     @if (remindersList.Any())
@@ -23,6 +28,7 @@
                                         <th>Type</th>
                                         <th>Description</th>
                                         <th>Status</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -61,6 +67,19 @@
                                                     </span>
                                                 }
                                             </td>
+                                            <td>
+                                                <div class="d-flex gap-2">
+                                                    @if (!reminder.IsCompleted)
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-success" @onclick="() => CompleteReminderAsync(reminder)">
+                                                            <i class="bi bi-check-circle me-1"></i>Complete
+                                                        </button>
+                                                    }
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteReminderAsync(reminder)">
+                                                        <i class="bi bi-trash me-1"></i>Delete
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -80,12 +99,31 @@
     </div>
 </div>
 
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                @successMessage
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Inject] private IReminderService ReminderService { get; set; } = default!;
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private List<Reminder> remindersList = new();
     private List<Reminder> _sortedReminders = new();
+    private bool showSuccessMessage = false;
+    private string successMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,5 +139,48 @@
     private bool IsUpcoming(Reminder reminder)
     {
         return !reminder.IsCompleted && reminder.DueDate >= DateTime.Today && reminder.DueDate <= DateTime.Today.AddDays(7);
+    }
+
+    private async Task CompleteReminderAsync(Reminder reminder)
+    {
+        var logDescription = $"Completed: {reminder.Description}";
+        var logDate = DateTime.Today;
+        bool recreate = false;
+        DateTime? newDueDate = null;
+        
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Mark reminder '{reminder.Description}' as complete and create log entry?"))
+        {
+            recreate = await JSRuntime.InvokeAsync<bool>("confirm", "Recreate this reminder with a new due date?");
+            if (recreate)
+            {
+                newDueDate = DateTime.Today.AddDays(30);
+            }
+            
+            await ReminderService.CompleteReminderAsync(reminder.Id, logDescription, logDate, recreate, newDueDate);
+            remindersList = (await ReminderService.GetAllRemindersWithVehicleAsync()).OrderBy(r => r.DueDate).ToList();
+            successMessage = "Reminder completed successfully!";
+            showSuccessMessage = true;
+            StateHasChanged();
+            
+            await Task.Delay(3000);
+            showSuccessMessage = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteReminderAsync(Reminder reminder)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Delete reminder '{reminder.Description}'?"))
+        {
+            await ReminderService.DeleteReminderAsync(reminder.Id);
+            remindersList = (await ReminderService.GetAllRemindersWithVehicleAsync()).OrderBy(r => r.DueDate).ToList();
+            successMessage = "Reminder deleted successfully!";
+            showSuccessMessage = true;
+            StateHasChanged();
+            
+            await Task.Delay(3000);
+            showSuccessMessage = false;
+            StateHasChanged();
+        }
     }
 }
