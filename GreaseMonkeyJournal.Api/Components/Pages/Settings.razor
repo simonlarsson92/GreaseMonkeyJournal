@@ -3,6 +3,7 @@
 @using GreaseMonkeyJournal.Api.Components.Services
 @inject IUserSettingsService UserSettingsService
 @inject INotificationSettingsService NotificationSettingsService
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <PageTitle>Settings - Grease Monkey Journal</PageTitle>
@@ -110,12 +111,12 @@
                                 in your environment variables for email delivery to work.
                             </div>
 
-                            @if (!string.IsNullOrEmpty(emailMessage))
+                            @if (!string.IsNullOrEmpty(message))
                             {
-                                <div class="alert @(emailSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show">
-                                    <i class="bi @(emailSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
-                                    @emailMessage
-                                    <button type="button" class="btn-close" @onclick="ClearEmailMessage"></button>
+                                <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show">
+                                    <i class="bi @(isSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                    @message
+                                    <button type="button" class="btn-close" @onclick="ClearMessage"></button>
                                 </div>
                             }
 
@@ -138,9 +139,14 @@
             </div>
 
             <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-question-circle me-2"></i>SMTP Configuration Help</h5>
+                <div class="card-header" style="cursor: pointer;" @onclick="ToggleHelpSection">
+                    <h5 class="mb-0">
+                        <i class="bi bi-question-circle me-2"></i>SMTP Configuration Help
+                        <i class="bi @(isHelpCollapsed ? "bi-chevron-down" : "bi-chevron-up") float-end"></i>
+                    </h5>
                 </div>
+                @if (!isHelpCollapsed)
+                {
                 <div class="card-body">
                     <h6>Gmail Setup:</h6>
                     <ol>
@@ -168,6 +174,7 @@
                         </li>
                     </ol>
                 </div>
+                }
             </div>
         </div>
     </div>
@@ -204,12 +211,14 @@
     private NotificationSettings? notificationSettings;
     private bool isLoading = true;
     private bool isSaving = false;
-    private string emailMessage = string.Empty;
-    private bool emailSuccess = false;
+    private string message = string.Empty;
+    private bool isSuccess = false;
+    private bool isHelpCollapsed = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadNotificationSettings();
+        await LoadSettings();
+        await LoadHelpCollapseState();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -229,7 +238,7 @@
         StateHasChanged();
     }
 
-    private async Task LoadNotificationSettings()
+    private async Task LoadSettings()
     {
         isLoading = true;
         try
@@ -238,8 +247,8 @@
         }
         catch (Exception ex)
         {
-            emailMessage = $"Error loading settings: {ex.Message}";
-            emailSuccess = false;
+            message = $"Error loading settings: {ex.Message}";
+            isSuccess = false;
         }
         finally
         {
@@ -252,18 +261,18 @@
         if (notificationSettings == null) return;
 
         isSaving = true;
-        emailMessage = string.Empty;
+        message = string.Empty;
 
         try
         {
             await NotificationSettingsService.SaveAsync(notificationSettings);
-            emailMessage = "Notification settings saved successfully!";
-            emailSuccess = true;
+            message = "Notification settings saved successfully!";
+            isSuccess = true;
         }
         catch (Exception ex)
         {
-            emailMessage = $"Error saving settings: {ex.Message}";
-            emailSuccess = false;
+            message = $"Error saving settings: {ex.Message}";
+            isSuccess = false;
         }
         finally
         {
@@ -271,9 +280,28 @@
         }
     }
 
-    private void ClearEmailMessage()
+    private void ClearMessage()
     {
-        emailMessage = string.Empty;
+        message = string.Empty;
+    }
+
+    private async Task LoadHelpCollapseState()
+    {
+        try
+        {
+            var collapsedValue = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "settingsHelpCollapsed");
+            isHelpCollapsed = collapsedValue == "true";
+        }
+        catch
+        {
+            isHelpCollapsed = true;
+        }
+    }
+
+    private async Task ToggleHelpSection()
+    {
+        isHelpCollapsed = !isHelpCollapsed;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "settingsHelpCollapsed", isHelpCollapsed);
     }
 
     private record CurrencyOption(string Code, string Label);

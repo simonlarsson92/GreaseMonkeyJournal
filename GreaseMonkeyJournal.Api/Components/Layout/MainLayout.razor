@@ -15,8 +15,8 @@
                 <img src="/images/grease_monkey_journal.png" alt="@AppSettingsOptions.Value.ApplicationTitle" class="navbar-brand-img me-2" />
                 @AppSettingsOptions.Value.ApplicationTitle
             </a>
-            <div class="navbar-nav ms-auto">
-                <a class="theme-toggle nav-icon-link" href="/settings" title="Settings">
+            <div class="navbar-nav ms-auto d-flex align-items-center">
+                <a href="/settings" class="theme-toggle me-2" title="Settings">
                     <i class="bi bi-gear"></i>
                 </a>
                 <button class="theme-toggle" @onclick="ToggleDarkMode" title="Toggle dark mode">
