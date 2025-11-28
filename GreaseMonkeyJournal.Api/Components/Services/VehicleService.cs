@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using GreaseMonkeyJournal.Api.Components.Models;
 using GreaseMonkeyJournal.Api.Components.DbContext;
 
@@ -35,6 +36,7 @@ namespace GreaseMonkeyJournal.Api.Components.Services;
 public class VehicleService : IVehicleService
 {
     private readonly VehicleLogDbContext _context;
+    private readonly ILogger<VehicleService> _logger;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="VehicleService"/> class with the required dependencies.
@@ -58,9 +60,10 @@ public class VehicleService : IVehicleService
     /// var vehicleService = new VehicleService(dbContext);
     /// </code>
     /// </example>
-    public VehicleService(VehicleLogDbContext context)
+    public VehicleService(VehicleLogDbContext context, ILogger<VehicleService> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
@@ -77,13 +80,16 @@ public class VehicleService : IVehicleService
     /// </exception>
     async Task<List<Vehicle>> IVehicleService.GetAllAsync()
     {
+        _logger.LogDebug("Retrieving all vehicles from database");
         try
         {
-            return await _context.Vehicles.ToListAsync();
+            var vehicles = await _context.Vehicles.ToListAsync();
+            _logger.LogInformation("Retrieved {VehicleCount} vehicles from database", vehicles.Count);
+            return vehicles;
         }
         catch (Exception ex) when (!(ex is ArgumentNullException))
         {
-            // Log the exception details here in a real application
+            _logger.LogError(ex, "Failed to retrieve vehicles from database");
             throw new InvalidOperationException("Failed to retrieve vehicles from the database.", ex);
         }
     }
@@ -103,14 +109,28 @@ public class VehicleService : IVehicleService
     async Task<Vehicle?> IVehicleService.GetByIdAsync(int id)
     {
         if (id <= 0)
+        {
+            _logger.LogWarning("Attempted to retrieve vehicle with invalid ID: {VehicleId}", id);
             throw new ArgumentException("Vehicle ID must be a positive integer.", nameof(id));
+        }
             
+        _logger.LogDebug("Retrieving vehicle with ID: {VehicleId}", id);
         try
         {
-            return await _context.Vehicles.FindAsync(id);
+            var vehicle = await _context.Vehicles.FindAsync(id);
+            if (vehicle != null)
+            {
+                _logger.LogDebug("Found vehicle {VehicleId}: {Make} {Model}", id, vehicle.Make, vehicle.Model);
+            }
+            else
+            {
+                _logger.LogDebug("Vehicle with ID {VehicleId} not found", id);
+            }
+            return vehicle;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
         {
+            _logger.LogError(ex, "Failed to retrieve vehicle with ID {VehicleId}", id);
             throw new InvalidOperationException($"Failed to retrieve vehicle with ID {id} from the database.", ex);
         }
     }
@@ -133,20 +153,26 @@ public class VehicleService : IVehicleService
     async Task IVehicleService.AddAsync(Vehicle vehicle)
     {
         if (vehicle == null)
+        {
+            _logger.LogWarning("Attempted to add null vehicle");
             throw new ArgumentNullException(nameof(vehicle));
+        }
             
+        _logger.LogInformation("Adding new vehicle: {Make} {Model} {Year}", vehicle.Make, vehicle.Model, vehicle.Year);
         try
         {
             _context.Vehicles.Add(vehicle);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Successfully added vehicle with ID: {VehicleId}", vehicle.Id);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            // Re-throw database-specific exceptions as-is for proper handling upstream
+            _logger.LogError(ex, "Database constraint violation while adding vehicle: {Make} {Model}", vehicle.Make, vehicle.Model);
             throw;
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to add vehicle: {Make} {Model}", vehicle.Make, vehicle.Model);
             throw new InvalidOperationException("Failed to add the vehicle to the database.", ex);
         }
     }
@@ -172,20 +198,26 @@ public class VehicleService : IVehicleService
     async Task IVehicleService.UpdateAsync(Vehicle vehicle)
     {
         if (vehicle == null)
+        {
+            _logger.LogWarning("Attempted to update null vehicle");
             throw new ArgumentNullException(nameof(vehicle));
+        }
             
+        _logger.LogInformation("Updating vehicle with ID: {VehicleId}", vehicle.Id);
         try
         {
             _context.Vehicles.Update(vehicle);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Successfully updated vehicle with ID: {VehicleId}", vehicle.Id);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            // Re-throw database-specific exceptions as-is for proper handling upstream
+            _logger.LogError(ex, "Database constraint violation while updating vehicle with ID: {VehicleId}", vehicle.Id);
             throw;
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to update vehicle with ID: {VehicleId}", vehicle.Id);
             throw new InvalidOperationException("Failed to update the vehicle in the database.", ex);
         }
     }
@@ -208,8 +240,12 @@ public class VehicleService : IVehicleService
     async Task IVehicleService.DeleteAsync(int id)
     {
         if (id <= 0)
+        {
+            _logger.LogWarning("Attempted to delete vehicle with invalid ID: {VehicleId}", id);
             throw new ArgumentException("Vehicle ID must be a positive integer.", nameof(id));
+        }
             
+        _logger.LogInformation("Attempting to delete vehicle with ID: {VehicleId}", id);
         try
         {
             var vehicle = await _context.Vehicles.FindAsync(id);
@@ -217,15 +253,21 @@ public class VehicleService : IVehicleService
             {
                 _context.Vehicles.Remove(vehicle);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully deleted vehicle with ID: {VehicleId}", id);
+            }
+            else
+            {
+                _logger.LogWarning("Attempted to delete non-existent vehicle with ID: {VehicleId}", id);
             }
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            // Re-throw database-specific exceptions as-is for proper handling upstream
+            _logger.LogError(ex, "Database constraint violation while deleting vehicle with ID: {VehicleId}. Vehicle may have related records", id);
             throw;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
         {
+            _logger.LogError(ex, "Failed to delete vehicle with ID: {VehicleId}", id);
             throw new InvalidOperationException($"Failed to delete vehicle with ID {id} from the database.", ex);
         }
     }

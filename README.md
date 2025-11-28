@@ -120,6 +120,7 @@ The application includes a comprehensive schema for vehicle maintenance tracking
 |---------|----------------|-------|-------------|
 | **greasemonkeyjournal.api** | greasemonkeyjournal-greasemonkeyjournal.api-1 | 8080:8080 | Main Blazor Server application |
 | **mariadb** | greasemonkey-mariadb | 3306:3306 | MariaDB database server |
+| **seq** | greasemonkey-seq | 5341:80, 5342:5341 | Seq log aggregation and analysis |
 
 ### Environment Variables
 
@@ -131,6 +132,8 @@ The application includes a comprehensive schema for vehicle maintenance tracking
 | `MYSQL_PASSWORD` | Application user password | `SecureAppPassword456!` |
 | `ASPNETCORE_ENVIRONMENT` | ASP.NET Core environment | `Development` |
 | `APP_TITLE` | Application title | `Grease Monkey Journal` |
+| `SEQ_URL` | Seq server URL (internal) | `http://seq:5341` |
+| `SEQ_API_KEY` | Seq API key (optional) | `` |
 
 ### Docker Network
 - **Network Name**: `greasemonkey-network`
@@ -139,6 +142,7 @@ The application includes a comprehensive schema for vehicle maintenance tracking
 
 ### Volumes
 - **mariadb_data**: Persistent storage for MariaDB data
+- **seq_data**: Persistent storage for Seq logs and configuration
 - **init.sql**: Database initialization script with schema and security setup
 
 ## Database Configuration
@@ -155,6 +159,98 @@ The application includes a comprehensive schema for vehicle maintenance tracking
 - Root user access restricted to localhost only
 - No remote root access allowed
 - Strong password requirements enforced
+
+## Logging with Seq
+
+The application uses **Serilog** with **Seq** for centralized structured logging, making it easy to diagnose issues, track exceptions, and monitor application health.
+
+### What is Seq?
+
+Seq is a log aggregation and analysis tool designed for structured logging. It provides:
+- **Powerful search and filtering** across all log events
+- **Real-time log streaming** as events occur
+- **Exception tracking** with full stack traces
+- **Query-based dashboards** for monitoring
+- **Alerting** on error patterns (Pro feature)
+
+### Accessing Seq
+
+Once your development environment is running:
+
+1. **Seq Web UI**: http://localhost:5341
+2. **No authentication required** in development (configured with `SEQ_FIRSTRUN_NOAUTHENTICATION=True`)
+
+### Log Levels
+
+The application uses these log levels:
+
+- **Debug**: Method entry/exit, detailed flow (Development only)
+- **Information**: Business events (vehicle created, log entry added, reminder completed)
+- **Warning**: Validation failures, retry attempts, non-critical issues
+- **Error**: Exceptions, failed operations
+- **Critical**: Application startup failures, database unavailable
+
+### Structured Logging
+
+All logs include structured properties for easy querying:
+
+```csharp
+// Example log statement with structured properties
+_logger.LogInformation("Added vehicle with ID: {VehicleId} for user {UserId}", vehicleId, userId);
+```
+
+**Common properties:**
+- `VehicleId` - Vehicle entity ID
+- `LogEntryId` - Log entry ID
+- `ReminderId` - Reminder ID
+- `MachineName` - Server/container name
+- `EnvironmentName` - Development/Production
+
+### Querying Logs in Seq
+
+**Examples:**
+
+```sql
+-- Find all errors in the last hour
+@Level = 'Error' and @Timestamp > Now()-1h
+
+-- Find logs for a specific vehicle
+VehicleId = 5
+
+-- Find all database constraint violations
+@Exception like '%DbUpdateException%'
+
+-- Find slow operations (over 1 second)
+Elapsed > 1000
+
+-- Find all operations for VehicleService
+SourceContext = 'GreaseMonkeyJournal.Api.Components.Services.VehicleService'
+```
+
+### Log Retention
+
+By default, Seq stores logs indefinitely in the development environment. For production:
+
+1. Configure retention policies in Seq UI: **Settings** → **Retention**
+2. Set appropriate retention periods based on compliance requirements
+3. Consider archiving important logs to external storage
+
+### Viewing Logs
+
+**Console Logs (Docker)**
+```bash
+# View all application logs
+docker-compose logs -f greasemonkeyjournal.api
+
+# View Seq container logs
+docker-compose logs -f seq
+```
+
+**Seq Web UI**
+1. Navigate to http://localhost:5341
+2. Use the search bar to filter logs
+3. Click on any log event for detailed information
+4. Use the "Signals" feature to create reusable queries
 
 ## Development Setup
 
@@ -253,9 +349,28 @@ If you encounter "Access denied" errors:
 If containers fail to start due to name conflicts:
 ```bash
 # Remove conflicting containers
-docker rm -f greasemonkey-mariadb
+docker rm -f greasemonkey-mariadb greasemonkey-seq
 docker-compose up -d --build
 ```
+
+#### Seq Not Receiving Logs
+If Seq is running but not showing logs:
+1. **Check Seq container is running**:
+   ```bash
+   docker-compose ps seq
+   ```
+2. **Verify Seq URL in environment**:
+   ```bash
+   docker-compose config | grep SEQ_URL
+   ```
+3. **Check application logs for Serilog errors**:
+   ```bash
+   docker-compose logs greasemonkeyjournal.api | grep -i serilog
+   ```
+4. **Restart the application**:
+   ```bash
+   docker-compose restart greasemonkeyjournal.api
+   ```
 
 ### Useful Commands
 

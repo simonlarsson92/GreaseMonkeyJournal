@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
 
@@ -69,6 +70,7 @@ namespace GreaseMonkeyJournal.Api.Components.Services
     {
         private readonly VehicleLogDbContext _context;
         private readonly ILogEntryService _logEntryService;
+        private readonly ILogger<ReminderService> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ReminderService"/> class with the required dependencies.
@@ -104,10 +106,11 @@ namespace GreaseMonkeyJournal.Api.Components.Services
         /// var reminderService = new ReminderService(dbContext, logEntryService);
         /// </code>
         /// </example>
-        public ReminderService(VehicleLogDbContext context, ILogEntryService logEntryService)
+        public ReminderService(VehicleLogDbContext context, ILogEntryService logEntryService, ILogger<ReminderService> logger)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logEntryService = logEntryService ?? throw new ArgumentNullException(nameof(logEntryService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <inheritdoc />
@@ -125,14 +128,21 @@ namespace GreaseMonkeyJournal.Api.Components.Services
         async Task<List<Reminder>> IReminderService.GetRemindersForVehicleAsync(int vehicleId)
         {
             if (vehicleId <= 0)
+            {
+                _logger.LogWarning("Attempted to retrieve reminders with invalid vehicle ID: {VehicleId}", vehicleId);
                 throw new ArgumentException("Vehicle ID must be a positive integer.", nameof(vehicleId));
+            }
                 
+            _logger.LogDebug("Retrieving reminders for vehicle ID: {VehicleId}", vehicleId);
             try
             {
-                return await _context.Reminders.Where(r => r.VehicleId == vehicleId).ToListAsync();
+                var reminders = await _context.Reminders.Where(r => r.VehicleId == vehicleId).ToListAsync();
+                _logger.LogInformation("Retrieved {ReminderCount} reminders for vehicle {VehicleId}", reminders.Count, vehicleId);
+                return reminders;
             }
             catch (Exception ex) when (!(ex is ArgumentException))
             {
+                _logger.LogError(ex, "Failed to retrieve reminders for vehicle ID {VehicleId}", vehicleId);
                 throw new InvalidOperationException($"Failed to retrieve reminders for vehicle ID {vehicleId} from the database.", ex);
             }
         }
@@ -152,14 +162,28 @@ namespace GreaseMonkeyJournal.Api.Components.Services
         async Task<Reminder?> IReminderService.GetReminderByIdAsync(int id)
         {
             if (id <= 0)
+            {
+                _logger.LogWarning("Attempted to retrieve reminder with invalid ID: {ReminderId}", id);
                 throw new ArgumentException("Reminder ID must be a positive integer.", nameof(id));
+            }
                 
+            _logger.LogDebug("Retrieving reminder with ID: {ReminderId}", id);
             try
             {
-                return await _context.Reminders.FindAsync(id);
+                var reminder = await _context.Reminders.FindAsync(id);
+                if (reminder != null)
+                {
+                    _logger.LogDebug("Found reminder {ReminderId} for vehicle {VehicleId}", id, reminder.VehicleId);
+                }
+                else
+                {
+                    _logger.LogDebug("Reminder with ID {ReminderId} not found", id);
+                }
+                return reminder;
             }
             catch (Exception ex) when (!(ex is ArgumentException))
             {
+                _logger.LogError(ex, "Failed to retrieve reminder with ID {ReminderId}", id);
                 throw new InvalidOperationException($"Failed to retrieve reminder with ID {id} from the database.", ex);
             }
         }
@@ -183,20 +207,26 @@ namespace GreaseMonkeyJournal.Api.Components.Services
         async Task IReminderService.AddReminderAsync(Reminder reminder)
         {
             if (reminder == null)
+            {
+                _logger.LogWarning("Attempted to add null reminder");
                 throw new ArgumentNullException(nameof(reminder));
+            }
                 
+            _logger.LogInformation("Adding new reminder for vehicle {VehicleId}: {Type}", reminder.VehicleId, reminder.Type);
             try
             {
                 _context.Reminders.Add(reminder);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully added reminder with ID: {ReminderId} for vehicle {VehicleId}", reminder.Id, reminder.VehicleId);
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                // Re-throw database-specific exceptions as-is for proper handling upstream
+                _logger.LogError(ex, "Database constraint violation while adding reminder for vehicle {VehicleId}", reminder.VehicleId);
                 throw;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to add reminder for vehicle {VehicleId}", reminder.VehicleId);
                 throw new InvalidOperationException("Failed to add the reminder to the database.", ex);
             }
         }
