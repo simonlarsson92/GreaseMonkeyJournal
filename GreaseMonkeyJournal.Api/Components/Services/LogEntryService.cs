@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using GreaseMonkeyJournal.Api.Components.Models;
 using GreaseMonkeyJournal.Api.Components.DbContext;
 
@@ -48,6 +49,7 @@ namespace GreaseMonkeyJournal.Api.Components.Services;
 public class LogEntryService : ILogEntryService
 {
     private readonly VehicleLogDbContext _context;
+    private readonly ILogger<LogEntryService> _logger;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="LogEntryService"/> class with the required dependencies.
@@ -74,9 +76,10 @@ public class LogEntryService : ILogEntryService
     /// var logEntryService = new LogEntryService(dbContext);
     /// </code>
     /// </example>
-    public LogEntryService(VehicleLogDbContext context)
+    public LogEntryService(VehicleLogDbContext context, ILogger<LogEntryService> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
@@ -96,10 +99,12 @@ public class LogEntryService : ILogEntryService
     {
         try
         {
-            return await _context.LogEntries.Include(le => le.Vehicle).ToListAsync();
+            var entries = await _context.LogEntries.Include(le => le.Vehicle).ToListAsync();
+            return entries;
         }
-        catch (Exception ex) when (!(ex is ArgumentNullException))
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve log entries from database");
             throw new InvalidOperationException("Failed to retrieve log entries from the database.", ex);
         }
     }
@@ -120,14 +125,18 @@ public class LogEntryService : ILogEntryService
     async Task<LogEntry?> ILogEntryService.GetByIdAsync(int id)
     {
         if (id <= 0)
+        {
             throw new ArgumentException("Log entry ID must be a positive integer.", nameof(id));
+        }
             
         try
         {
-            return await _context.LogEntries.Include(le => le.Vehicle).FirstOrDefaultAsync(le => le.Id == id);
+            var entry = await _context.LogEntries.Include(le => le.Vehicle).FirstOrDefaultAsync(le => le.Id == id);
+            return entry;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
         {
+            _logger.LogError(ex, "Failed to retrieve log entry with ID {LogEntryId}", id);
             throw new InvalidOperationException($"Failed to retrieve log entry with ID {id} from the database.", ex);
         }
     }
@@ -148,17 +157,21 @@ public class LogEntryService : ILogEntryService
     async Task<List<LogEntry>> ILogEntryService.GetByVehicleIdAsync(int vehicleId)
     {
         if (vehicleId <= 0)
+        {
             throw new ArgumentException("Vehicle ID must be a positive integer.", nameof(vehicleId));
+        }
             
         try
         {
-            return await _context.LogEntries
+            var entries = await _context.LogEntries
                 .Include(le => le.Vehicle)
                 .Where(le => le.VehicleId == vehicleId)
                 .ToListAsync();
+            return entries;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
         {
+            _logger.LogError(ex, "Failed to retrieve log entries for vehicle ID {VehicleId}", vehicleId);
             throw new InvalidOperationException($"Failed to retrieve log entries for vehicle ID {vehicleId} from the database.", ex);
         }
     }
@@ -186,22 +199,27 @@ public class LogEntryService : ILogEntryService
     async Task ILogEntryService.AddAsync(LogEntry entry)
     {
         if (entry == null)
+        {
             throw new ArgumentNullException(nameof(entry));
+        }
             
+        _logger.LogInformation("Adding new log entry for vehicle {VehicleId}: {Type}", entry.VehicleId, entry.Type);
         try
         {
             // Ensure navigation property is not set for add to avoid relationship conflicts
             entry.Vehicle = null;
             _context.LogEntries.Add(entry);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Successfully added log entry with ID: {LogEntryId} for vehicle {VehicleId}", entry.Id, entry.VehicleId);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            // Re-throw database-specific exceptions as-is for proper handling upstream
+            _logger.LogError(ex, "Database constraint violation while adding log entry for vehicle {VehicleId}", entry.VehicleId);
             throw;
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to add log entry for vehicle {VehicleId}", entry.VehicleId);
             throw new InvalidOperationException("Failed to add the log entry to the database.", ex);
         }
     }
@@ -233,11 +251,16 @@ public class LogEntryService : ILogEntryService
     async Task ILogEntryService.UpdateAsync(LogEntry entry)
     {
         if (entry == null)
+        {
             throw new ArgumentNullException(nameof(entry));
+        }
 
         if (entry.Id <= 0)
-            throw new ArgumentException("Reminder ID must be a positive integer.", nameof(entry.Id));
+        {
+            throw new ArgumentException("Log entry ID must be a positive integer.", nameof(entry.Id));
+        }
 
+        _logger.LogInformation("Updating log entry with ID: {LogEntryId}", entry.Id);
         try
         {
             // Clear navigation property to avoid relationship conflicts
@@ -257,19 +280,20 @@ public class LogEntryService : ILogEntryService
             _context.Entry(existingEntry).State = EntityState.Modified;
             
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Successfully updated log entry with ID: {LogEntryId}", entry.Id);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            // Re-throw database-specific exceptions as-is for proper handling upstream
+            _logger.LogError(ex, "Database constraint violation while updating log entry with ID: {LogEntryId}", entry.Id);
             throw;
         }
         catch (InvalidOperationException)
         {
-            // Re-throw our specific exceptions as-is
             throw;
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to update log entry with ID: {LogEntryId}", entry.Id);
             throw new InvalidOperationException("Failed to update the log entry in the database.", ex);
         }
     }
@@ -295,8 +319,11 @@ public class LogEntryService : ILogEntryService
     async Task ILogEntryService.DeleteAsync(int id)
     {
         if (id <= 0)
+        {
             throw new ArgumentException("Log entry ID must be a positive integer.", nameof(id));
+        }
             
+        _logger.LogInformation("Deleting log entry with ID: {LogEntryId}", id);
         try
         {
             var entry = await _context.LogEntries.FindAsync(id);
@@ -304,15 +331,17 @@ public class LogEntryService : ILogEntryService
             {
                 _context.LogEntries.Remove(entry);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully deleted log entry with ID: {LogEntryId}", id);
             }
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            // Re-throw database-specific exceptions as-is for proper handling upstream
+            _logger.LogError(ex, "Database constraint violation while deleting log entry with ID: {LogEntryId}", id);
             throw;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
         {
+            _logger.LogError(ex, "Failed to delete log entry with ID: {LogEntryId}", id);
             throw new InvalidOperationException($"Failed to delete log entry with ID {id} from the database.", ex);
         }
     }

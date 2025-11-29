@@ -22,6 +22,19 @@ services:
       retries: 5
       start_period: 30s
 
+  seq:
+    image: datalust/seq:latest
+    container_name: greasemonkey-seq
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "True"
+    ports:
+      - "5341:80"      # Web UI and Ingestion API
+    volumes:
+      - seq_data:/data
+    networks:
+      - greasemonkey-network
+
   greasemonkeyjournal.api:
     image: ${DOCKER_REGISTRY-}greasemonkeyjournalapi
     build:
@@ -32,15 +45,21 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      seq:
+        condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ConnectionStrings__MariaDbConnection=server=${DB_SERVER};port=${DB_PORT};database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD};Connect Timeout=${DB_CONNECTION_TIMEOUT};Command Timeout=${DB_COMMAND_TIMEOUT};Default Command Timeout=${DB_COMMAND_TIMEOUT};
       - AppSettings__ApplicationTitle=${APP_TITLE}
+      - Serilog__WriteTo__1__Name=Seq
+      - Serilog__WriteTo__1__Args__serverUrl=${SEQ_URL}
+      - Serilog__WriteTo__1__Args__apiKey=${SEQ_API_KEY}
     networks:
       - greasemonkey-network
 
 volumes:
   mariadb_data:
+  seq_data:
 
 networks:
   greasemonkey-network:
