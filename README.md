@@ -120,7 +120,7 @@ The application includes a comprehensive schema for vehicle maintenance tracking
 |---------|----------------|-------|-------------|
 | **greasemonkeyjournal.api** | greasemonkeyjournal-greasemonkeyjournal.api-1 | 8080:8080 | Main Blazor Server application |
 | **mariadb** | greasemonkey-mariadb | 3306:3306 | MariaDB database server |
-| **seq** | greasemonkey-seq | 5341:80, 5342:5341 | Seq log aggregation and analysis |
+| **seq** | greasemonkey-seq | 5341:80 | Seq log aggregation and analysis |
 
 ### Environment Variables
 
