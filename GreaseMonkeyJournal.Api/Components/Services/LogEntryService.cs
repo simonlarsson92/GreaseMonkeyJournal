@@ -97,14 +97,12 @@ public class LogEntryService : ILogEntryService
     /// </exception>
     async Task<List<LogEntry>> ILogEntryService.GetAllAsync()
     {
-        _logger.LogDebug("Retrieving all log entries from database");
         try
         {
             var entries = await _context.LogEntries.Include(le => le.Vehicle).ToListAsync();
-            _logger.LogInformation("Retrieved {LogEntryCount} log entries from database", entries.Count);
             return entries;
         }
-        catch (Exception ex) when (!(ex is ArgumentNullException))
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve log entries from database");
             throw new InvalidOperationException("Failed to retrieve log entries from the database.", ex);
@@ -128,22 +126,12 @@ public class LogEntryService : ILogEntryService
     {
         if (id <= 0)
         {
-            _logger.LogWarning("Attempted to retrieve log entry with invalid ID: {LogEntryId}", id);
             throw new ArgumentException("Log entry ID must be a positive integer.", nameof(id));
         }
             
-        _logger.LogDebug("Retrieving log entry with ID: {LogEntryId}", id);
         try
         {
             var entry = await _context.LogEntries.Include(le => le.Vehicle).FirstOrDefaultAsync(le => le.Id == id);
-            if (entry != null)
-            {
-                _logger.LogDebug("Found log entry {LogEntryId} for vehicle {VehicleId}", id, entry.VehicleId);
-            }
-            else
-            {
-                _logger.LogDebug("Log entry with ID {LogEntryId} not found", id);
-            }
             return entry;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
@@ -170,18 +158,15 @@ public class LogEntryService : ILogEntryService
     {
         if (vehicleId <= 0)
         {
-            _logger.LogWarning("Attempted to retrieve log entries with invalid vehicle ID: {VehicleId}", vehicleId);
             throw new ArgumentException("Vehicle ID must be a positive integer.", nameof(vehicleId));
         }
             
-        _logger.LogDebug("Retrieving log entries for vehicle ID: {VehicleId}", vehicleId);
         try
         {
             var entries = await _context.LogEntries
                 .Include(le => le.Vehicle)
                 .Where(le => le.VehicleId == vehicleId)
                 .ToListAsync();
-            _logger.LogInformation("Retrieved {LogEntryCount} log entries for vehicle {VehicleId}", entries.Count, vehicleId);
             return entries;
         }
         catch (Exception ex) when (!(ex is ArgumentException))
@@ -215,7 +200,6 @@ public class LogEntryService : ILogEntryService
     {
         if (entry == null)
         {
-            _logger.LogWarning("Attempted to add null log entry");
             throw new ArgumentNullException(nameof(entry));
         }
             
@@ -268,14 +252,12 @@ public class LogEntryService : ILogEntryService
     {
         if (entry == null)
         {
-            _logger.LogWarning("Attempted to update null log entry");
             throw new ArgumentNullException(nameof(entry));
         }
 
         if (entry.Id <= 0)
         {
-            _logger.LogWarning("Attempted to update log entry with invalid ID: {LogEntryId}", entry.Id);
-            throw new ArgumentException("Reminder ID must be a positive integer.", nameof(entry.Id));
+            throw new ArgumentException("Log entry ID must be a positive integer.", nameof(entry.Id));
         }
 
         _logger.LogInformation("Updating log entry with ID: {LogEntryId}", entry.Id);
@@ -288,7 +270,6 @@ public class LogEntryService : ILogEntryService
             var existingEntry = await _context.LogEntries.FindAsync(entry.Id);
             if (existingEntry == null)
             {
-                _logger.LogWarning("Attempted to update non-existent log entry with ID: {LogEntryId}", entry.Id);
                 throw new InvalidOperationException($"Log entry with ID {entry.Id} not found in the database.");
             }
 
@@ -308,7 +289,6 @@ public class LogEntryService : ILogEntryService
         }
         catch (InvalidOperationException)
         {
-            // Re-throw our specific exceptions as-is (already logged above)
             throw;
         }
         catch (Exception ex)
@@ -340,11 +320,10 @@ public class LogEntryService : ILogEntryService
     {
         if (id <= 0)
         {
-            _logger.LogWarning("Attempted to delete log entry with invalid ID: {LogEntryId}", id);
             throw new ArgumentException("Log entry ID must be a positive integer.", nameof(id));
         }
             
-        _logger.LogInformation("Attempting to delete log entry with ID: {LogEntryId}", id);
+        _logger.LogInformation("Deleting log entry with ID: {LogEntryId}", id);
         try
         {
             var entry = await _context.LogEntries.FindAsync(id);
@@ -353,10 +332,6 @@ public class LogEntryService : ILogEntryService
                 _context.LogEntries.Remove(entry);
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Successfully deleted log entry with ID: {LogEntryId}", id);
-            }
-            else
-            {
-                _logger.LogWarning("Attempted to delete non-existent log entry with ID: {LogEntryId}", id);
             }
         }
         catch (DbUpdateException ex)
