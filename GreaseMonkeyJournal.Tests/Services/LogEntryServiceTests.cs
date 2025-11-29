@@ -2,6 +2,8 @@ using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
 using GreaseMonkeyJournal.Api.Components.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace GreaseMonkeyJournal.Tests.Services;
 
@@ -60,7 +62,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetAllAsync();
@@ -77,7 +80,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetByIdAsync(1);
@@ -94,7 +98,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetByIdAsync(999);
@@ -108,7 +113,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetByVehicleIdAsync(1);
@@ -124,7 +130,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         var newLogEntry = new LogEntry
         {
             VehicleId = 1,
@@ -151,7 +158,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         var logEntry = await context.LogEntries.FindAsync(1);
         Assert.NotNull(logEntry);
         
@@ -174,7 +182,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         
         // Verify log entry exists before delete
         var logEntry = await context.LogEntries.FindAsync(1);
@@ -193,7 +202,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
         
         // Act & Assert
         await service.DeleteAsync(999); // Should not throw exception
@@ -204,7 +214,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() => service.AddAsync(null!));
@@ -215,7 +226,8 @@ public class LogEntryServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        ILogEntryService service = new LogEntryService(context);
+        var mockLogger = new Mock<ILogger<LogEntryService>>();
+        ILogEntryService service = new LogEntryService(context, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() => service.UpdateAsync(null!));

@@ -4,6 +4,7 @@ using GreaseMonkeyJournal.Api.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace GreaseMonkeyJournal.Tests.Extensions;
 
@@ -20,6 +21,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
 
@@ -49,6 +51,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
 
@@ -77,6 +80,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
 
@@ -133,6 +137,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
         services.AddApplicationServices();
@@ -156,6 +161,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
         
@@ -185,8 +191,10 @@ public class ServiceCollectionExtensionsTests
         var services1 = new ServiceCollection();
         var services2 = new ServiceCollection();
         
+        services1.AddLogging();
         services1.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
+        services2.AddLogging();
         services2.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
 
@@ -213,6 +221,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
 
@@ -238,6 +247,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
 

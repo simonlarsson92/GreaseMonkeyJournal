@@ -4,6 +4,7 @@ using GreaseMonkeyJournal.Api.Components.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace GreaseMonkeyJournal.Tests.Integration;
@@ -22,7 +23,8 @@ public class DependencyInjectionIntegrationTests
         // Arrange
         var services = new ServiceCollection();
         
-        // Add in-memory database
+        // Add logging and in-memory database
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
             
@@ -56,6 +58,7 @@ public class DependencyInjectionIntegrationTests
         // Arrange
         var services = new ServiceCollection();
         
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
             
@@ -116,6 +119,7 @@ public class DependencyInjectionIntegrationTests
         // Arrange
         var services = new ServiceCollection();
         
+        services.AddLogging();
         services.AddDbContext<VehicleLogDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
             

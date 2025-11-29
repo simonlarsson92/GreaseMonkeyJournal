@@ -2,6 +2,7 @@ using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
 using GreaseMonkeyJournal.Api.Components.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace GreaseMonkeyJournal.Tests.Services;
@@ -61,7 +62,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         
         // Act
         var result = await service.GetRemindersForVehicleAsync(1);
@@ -78,7 +80,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         
         // Act
         var result = await service.GetReminderByIdAsync(1);
@@ -95,7 +98,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         
         // Act
         var result = await service.GetReminderByIdAsync(999);
@@ -110,7 +114,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         var newReminder = new Reminder
         {
             VehicleId = 1,
@@ -136,7 +141,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         var reminder = await context.Reminders.FindAsync(1);
         Assert.NotNull(reminder);
         
@@ -160,7 +166,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         
         // Verify reminder exists before delete
         var reminder = await context.Reminders.FindAsync(1);
@@ -184,8 +191,9 @@ public class ReminderServiceTests
             .Setup(x => x.AddAsync(It.IsAny<LogEntry>()))
             .Returns(Task.CompletedTask)
             .Verifiable();
+        var mockLogger = new Mock<ILogger<ReminderService>>();
         
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         
         // Act
         await service.CompleteReminderAsync(1, "Completed oil change", DateTime.Today, false);
@@ -211,8 +219,9 @@ public class ReminderServiceTests
         mockLogEntryService
             .Setup(x => x.AddAsync(It.IsAny<LogEntry>()))
             .Returns(Task.CompletedTask);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
         
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         var newDueDate = DateTime.Today.AddDays(30);
         
         // Act
@@ -235,7 +244,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
         
         // Act
         var result = await service.GetAllRemindersWithVehicleAsync();
@@ -252,7 +262,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() => service.AddReminderAsync(null!));
@@ -264,7 +275,8 @@ public class ReminderServiceTests
         // Arrange
         using var context = GetDbContext();
         var mockLogEntryService = new Mock<ILogEntryService>();
-        IReminderService service = new ReminderService(context, mockLogEntryService.Object);
+        var mockLogger = new Mock<ILogger<ReminderService>>();
+        IReminderService service = new ReminderService(context, mockLogEntryService.Object, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => 

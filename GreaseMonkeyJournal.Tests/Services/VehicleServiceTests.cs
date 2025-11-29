@@ -2,6 +2,7 @@ using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
 using GreaseMonkeyJournal.Api.Components.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace GreaseMonkeyJournal.Tests.Services;
@@ -31,7 +32,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetAllAsync();
@@ -47,7 +49,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetByIdAsync(1);
@@ -63,7 +66,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         
         // Act
         var result = await service.GetByIdAsync(999);
@@ -77,7 +81,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         var newVehicle = new Vehicle
         {
             Make = "Ford",
@@ -102,7 +107,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         var vehicle = await context.Vehicles.FindAsync(1);
         Assert.NotNull(vehicle);
         
@@ -125,7 +131,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         
         // Verify vehicle exists before delete
         var vehicle = await context.Vehicles.FindAsync(1);
@@ -144,7 +151,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
         
         // Act & Assert
         await service.DeleteAsync(999); // Should not throw exception
@@ -155,7 +163,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() => service.AddAsync(null!));
@@ -166,7 +175,8 @@ public class VehicleServiceTests
     {
         // Arrange
         using var context = GetDbContext();
-        IVehicleService service = new VehicleService(context);
+        var mockLogger = new Mock<ILogger<VehicleService>>();
+        IVehicleService service = new VehicleService(context, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() => service.UpdateAsync(null!));
