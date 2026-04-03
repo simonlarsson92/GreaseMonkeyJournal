@@ -16,6 +16,9 @@
                 @AppSettingsOptions.Value.ApplicationTitle
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="theme-toggle nav-icon-link" href="/settings" title="Settings">
+                    <i class="bi bi-gear"></i>
+                </a>
                 <button class="theme-toggle" @onclick="ToggleDarkMode" title="Toggle dark mode">
                     <i class="bi @(_isDarkMode ? "bi-sun" : "bi-moon")"></i>
                 </button>

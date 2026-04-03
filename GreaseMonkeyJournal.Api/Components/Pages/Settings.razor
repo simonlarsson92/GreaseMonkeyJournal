@@ -1,0 +1,84 @@
+@page "/settings"
+@using GreaseMonkeyJournal.Api.Components.Services
+
+<PageTitle>Settings</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 col-lg-8 col-xl-6">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-gear me-2"></i>Settings</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="this" OnValidSubmit="SaveSettingsAsync">
+                        <div class="mb-3">
+                            <label for="currencyCode" class="form-label">Currency for costs</label>
+                            <select id="currencyCode" class="form-select" @bind="currencyCode">
+                                @foreach (var currency in CurrencyOptions)
+                                {
+                                    <option value="@currency.Code">@currency.Label</option>
+                                }
+                            </select>
+                            <div class="form-text">This currency is used when showing maintenance and repair costs.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                Settings saved.
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
+
+    private string currencyCode = "USD";
+    private bool showSuccessMessage;
+
+    private static readonly List<CurrencyOption> CurrencyOptions =
+    [
+        new("USD", "USD ($)"),
+        new("EUR", "EUR (€)"),
+        new("GBP", "GBP (£)"),
+        new("SEK", "SEK (kr)")
+    ];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        currencyCode = await UserSettingsService.GetCurrencyCodeAsync();
+        StateHasChanged();
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        await UserSettingsService.SetCurrencyCodeAsync(currencyCode);
+
+        showSuccessMessage = true;
+        StateHasChanged();
+        await Task.Delay(2500);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+    private record CurrencyOption(string Code, string Label);
+}

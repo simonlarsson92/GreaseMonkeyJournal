@@ -2,6 +2,7 @@
 @page "/vehicle/logs"
 @using GreaseMonkeyJournal.Api.Components.Models
 @using GreaseMonkeyJournal.Api.Components.Services
+@using System.Globalization
 
 <PageTitle>Vehicle Log Entries</PageTitle>
 
@@ -31,6 +32,7 @@
                                         <th>Cost</th>
                                         <th>Reading</th>
                                         <th>Notes</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -45,9 +47,14 @@
                                                     @entry.Type
                                                 </span>
                                             </td>
-                                            <td>@entry.Cost.ToString("C")</td>
+                                            <td>@FormatCurrency(entry.Cost)</td>
                                             <td>@GetSpeedometerReadingDisplay(entry)</td>
                                             <td>@entry.Notes</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditDialog(entry)">
+                                                    <i class="bi bi-pencil me-1"></i>Edit
+                                                </button>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -71,6 +78,7 @@
 {
     <AddLogEntryDialog 
         @ref="dialogComponent"
+        LogEntry="selectedEntry"
         VehicleId="@(vehicleId ?? 0)" 
         OnLogEntryAdded="HandleLogEntryAdded" 
         OnClosed="HandleDialogClosed" />
@@ -97,6 +105,7 @@
     [Inject] private ILogEntryService LogEntryService { get; set; } = default!;
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
 
     private IEnumerable<LogEntry> logEntries = new List<LogEntry>();
     private bool IsSingleMode => vehicleId.HasValue;
@@ -104,14 +113,46 @@
     private bool showSuccessMessage = false;
     private string successMessage = "";
     private AddLogEntryDialog? dialogComponent;
+    private LogEntry? selectedEntry;
+    private string currencyCode = "USD";
+    private static readonly Dictionary<string, string> CurrencyCultureMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["USD"] = "en-US",
+        ["EUR"] = "de-DE",
+        ["GBP"] = "en-GB",
+        ["SEK"] = "sv-SE"
+    };
 
     protected override async Task OnInitializedAsync()
     {
         logEntries = await GetLogEntriesAsync();
+        currencyCode = await UserSettingsService.GetCurrencyCodeAsync();
     }
 
     private async Task ShowAddDialog()
     {
+        selectedEntry = null;
+        showDialog = true;
+        StateHasChanged();
+        if (dialogComponent != null)
+        {
+            await dialogComponent.ShowModal();
+        }
+    }
+    private async Task ShowEditDialog(LogEntry entry)
+    {
+        selectedEntry = new LogEntry
+        {
+            Id = entry.Id,
+            VehicleId = entry.VehicleId,
+            Date = entry.Date,
+            Description = entry.Description,
+            Cost = entry.Cost,
+            Type = entry.Type,
+            Notes = entry.Notes,
+            SpeedometerReading = entry.SpeedometerReading
+        };
+
         showDialog = true;
         StateHasChanged();
         if (dialogComponent != null)
@@ -122,9 +163,17 @@
 
     private async Task HandleLogEntryAdded(LogEntry newEntry)
     {
-        await LogEntryService.AddAsync(newEntry);
+        if (newEntry.Id > 0)
+        {
+            await LogEntryService.UpdateAsync(newEntry);
+            successMessage = "Log entry updated successfully!";
+        }
+        else
+        {
+            await LogEntryService.AddAsync(newEntry);
+            successMessage = "Log entry created successfully!";
+        }
         logEntries = await GetLogEntriesAsync();
-        successMessage = "Log entry created successfully!";
         showSuccessMessage = true;
         StateHasChanged();
         await Task.Delay(3000);
@@ -135,6 +184,7 @@
     private void HandleDialogClosed()
     {
         showDialog = false;
+        selectedEntry = null;
         StateHasChanged();
     }
 
@@ -156,5 +206,13 @@
             return $"{logEntry.SpeedometerReading:N0} {unit}";
         }
         return "N/A";
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        if (!CurrencyCultureMap.TryGetValue(currencyCode, out var cultureName))
+            cultureName = "en-US";
+
+        return amount.ToString("C", CultureInfo.GetCultureInfo(cultureName));
     }
 }
