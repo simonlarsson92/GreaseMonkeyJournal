@@ -164,6 +164,13 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     color: var(--warning-color);
 }
 
+.nav-icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
 /* Responsive navbar assets */
 @media (max-width: 768px) {
     .hero-logo { height: 60px; max-width: 90px; }

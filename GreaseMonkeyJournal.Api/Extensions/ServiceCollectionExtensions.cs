@@ -24,6 +24,9 @@ public static class ServiceCollectionExtensions
         
         // Register reminder services (depends on ILogEntryService)
         services.AddScoped<IReminderService, ReminderService>();
+
+        // Register user settings service
+        services.AddScoped<IUserSettingsService, UserSettingsService>();
         
         return services;
     }

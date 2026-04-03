@@ -3,18 +3,18 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addLogEntryModalLabel">Add Log Entry</h5>
+                <h5 class="modal-title" id="addLogEntryModalLabel">@DialogTitle</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="CloseDialog"></button>
             </div>
 
             <div class="modal-body">
-                <EditForm Model="entry" OnValidSubmit="Add">
+                <EditForm Model="entry" OnValidSubmit="Save">
                     <DataAnnotationsValidator />
                     <ValidationSummary class="text-danger" />
 
                     <div class="mb-3">
                         <label for="vehicleSelect" class="form-label">Vehicle *</label>
-                        <select id="vehicleSelect" class="form-select" @bind="entry.VehicleId" required>
+                        <select id="vehicleSelect" class="form-select" @bind="SelectedVehicleId" required>
                             <option value="0">Select a vehicle...</option>
                             @if (Vehicles != null)
                             {
@@ -64,7 +64,7 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Add</button>
+                        <button type="submit" class="btn btn-primary">@SaveButtonText</button>
                         <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Cancel</button>
                     </div>
                 </EditForm>
@@ -84,6 +84,9 @@
     public IEnumerable<Vehicle>? Vehicles { get; set; } = new List<Vehicle>();
     private LogEntry entry = new() { Date = DateTime.Now };
     private Vehicle? selectedVehicle;
+    private bool IsEditMode => entry.Id > 0;
+    private string DialogTitle => IsEditMode ? "Edit Log Entry" : "Add Log Entry";
+    private string SaveButtonText => IsEditMode ? "Save Changes" : "Add";
 
     private int SelectedVehicleId
     {
@@ -98,8 +101,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (LogEntry is not null)
-            entry = LogEntry;
         if (VehicleId > 0)
         {
             var vehicle = await VehicleService.GetByIdAsync(VehicleId);
@@ -114,6 +115,13 @@
         {
             Vehicles = await VehicleService.GetAllAsync();
         }
+
+        SetEntryFromParameters();
+    }
+
+    protected override void OnParametersSet()
+    {
+        SetEntryFromParameters();
     }
 
     public async Task ShowModal()
@@ -131,13 +139,40 @@
         };
     }
 
-    private async Task Add()
+    private async Task Save()
     {
         if (entry.VehicleId > 0 && !string.IsNullOrWhiteSpace(entry.Description) && !string.IsNullOrWhiteSpace(entry.Type))
         {
             await OnLogEntryAdded.InvokeAsync(entry);
             await CloseDialog();
         }
+    }
+    private void SetEntryFromParameters()
+    {
+        if (LogEntry is not null)
+        {
+            entry = new LogEntry
+            {
+                Id = LogEntry.Id,
+                VehicleId = LogEntry.VehicleId,
+                Date = LogEntry.Date,
+                Description = LogEntry.Description,
+                Cost = LogEntry.Cost,
+                Type = LogEntry.Type,
+                Notes = LogEntry.Notes,
+                SpeedometerReading = LogEntry.SpeedometerReading
+            };
+        }
+        else
+        {
+            entry = new LogEntry
+            {
+                Date = DateTime.Now,
+                VehicleId = VehicleId > 0 ? VehicleId : 0
+            };
+        }
+
+        selectedVehicle = Vehicles?.FirstOrDefault(v => v.Id == entry.VehicleId);
     }
 
     private async Task CloseDialog()
