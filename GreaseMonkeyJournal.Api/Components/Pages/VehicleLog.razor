@@ -25,18 +25,18 @@
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Vehicle</th>
-                                        <th>Description</th>
-                                        <th>Type</th>
-                                        <th>Cost</th>
-                                        <th>Reading</th>
-                                        <th>Notes</th>
+                                        <th role="button" @onclick="() => SortBy(nameof(LogEntry.Date))">Date <i class="bi @GetSortIcon(nameof(LogEntry.Date))"></i></th>
+                                        <th role="button" @onclick="() => SortBy("Vehicle")">Vehicle <i class="bi @GetSortIcon("Vehicle")"></i></th>
+                                        <th role="button" @onclick="() => SortBy(nameof(LogEntry.Description))">Description <i class="bi @GetSortIcon(nameof(LogEntry.Description))"></i></th>
+                                        <th role="button" @onclick="() => SortBy(nameof(LogEntry.Type))">Type <i class="bi @GetSortIcon(nameof(LogEntry.Type))"></i></th>
+                                        <th role="button" @onclick="() => SortBy(nameof(LogEntry.Cost))">Cost <i class="bi @GetSortIcon(nameof(LogEntry.Cost))"></i></th>
+                                        <th role="button" @onclick="() => SortBy("Reading")">Reading <i class="bi @GetSortIcon("Reading")"></i></th>
+                                        <th role="button" @onclick="() => SortBy(nameof(LogEntry.Notes))">Notes <i class="bi @GetSortIcon(nameof(LogEntry.Notes))"></i></th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var entry in logEntries)
+                                    @foreach (var entry in sortedEntries)
                                     {
                                         <tr>
                                             <td>@entry.Date?.ToShortDateString()</td>
@@ -108,6 +108,9 @@
     [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
 
     private IEnumerable<LogEntry> logEntries = new List<LogEntry>();
+    private IEnumerable<LogEntry> sortedEntries => ApplySort(logEntries);
+    private string sortColumn = nameof(LogEntry.Date);
+    private bool sortAscending = false;
     private bool IsSingleMode => vehicleId.HasValue;
     private bool showDialog = false;
     private bool showSuccessMessage = false;
@@ -134,6 +137,7 @@
         selectedEntry = null;
         showDialog = true;
         StateHasChanged();
+        await Task.Yield();
         if (dialogComponent != null)
         {
             await dialogComponent.ShowModal();
@@ -155,6 +159,7 @@
 
         showDialog = true;
         StateHasChanged();
+        await Task.Yield();
         if (dialogComponent != null)
         {
             await dialogComponent.ShowModal();
@@ -214,5 +219,52 @@
             cultureName = "en-US";
 
         return amount.ToString("C", CultureInfo.GetCultureInfo(cultureName));
+    }
+
+    private void SortBy(string column)
+    {
+        if (sortColumn == column)
+            sortAscending = !sortAscending;
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+    }
+
+    private IEnumerable<LogEntry> ApplySort(IEnumerable<LogEntry> entries)
+    {
+        return sortColumn switch
+        {
+            nameof(LogEntry.Date) => sortAscending
+                ? entries.OrderBy(e => e.Date)
+                : entries.OrderByDescending(e => e.Date),
+            "Vehicle" => sortAscending
+                ? entries.OrderBy(e => e.Vehicle?.Make).ThenBy(e => e.Vehicle?.Model)
+                : entries.OrderByDescending(e => e.Vehicle?.Make).ThenByDescending(e => e.Vehicle?.Model),
+            nameof(LogEntry.Description) => sortAscending
+                ? entries.OrderBy(e => e.Description)
+                : entries.OrderByDescending(e => e.Description),
+            nameof(LogEntry.Type) => sortAscending
+                ? entries.OrderBy(e => e.Type)
+                : entries.OrderByDescending(e => e.Type),
+            nameof(LogEntry.Cost) => sortAscending
+                ? entries.OrderBy(e => e.Cost)
+                : entries.OrderByDescending(e => e.Cost),
+            "Reading" => sortAscending
+                ? entries.OrderBy(e => e.SpeedometerReading)
+                : entries.OrderByDescending(e => e.SpeedometerReading),
+            nameof(LogEntry.Notes) => sortAscending
+                ? entries.OrderBy(e => e.Notes)
+                : entries.OrderByDescending(e => e.Notes),
+            _ => entries
+        };
+    }
+
+    private string GetSortIcon(string column)
+    {
+        if (sortColumn != column)
+            return "bi-chevron-expand";
+        return sortAscending ? "bi-chevron-up" : "bi-chevron-down";
     }
 }

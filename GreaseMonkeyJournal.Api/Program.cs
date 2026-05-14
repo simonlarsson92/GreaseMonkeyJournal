@@ -14,12 +14,20 @@ try
 
     // Configure Serilog using builder pattern
     builder.Host.UseSerilog((context, configuration) =>
+    {
         configuration
             .ReadFrom.Configuration(context.Configuration)
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
             .Enrich.WithEnvironmentName()
-            .Enrich.WithExceptionDetails());
+            .Enrich.WithExceptionDetails();
+
+        var seqUrl = context.Configuration["Seq:ServerUrl"];
+        if (!string.IsNullOrEmpty(seqUrl))
+        {
+            configuration.WriteTo.Seq(seqUrl, apiKey: context.Configuration["Seq:ApiKey"]);
+        }
+    });
 
     // Configure AppSettings
     builder.Services.Configure<AppSettings>(

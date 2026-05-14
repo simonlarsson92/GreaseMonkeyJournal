@@ -51,9 +51,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ConnectionStrings__MariaDbConnection=server=${DB_SERVER};port=${DB_PORT};database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD};Connect Timeout=${DB_CONNECTION_TIMEOUT};Command Timeout=${DB_COMMAND_TIMEOUT};Default Command Timeout=${DB_COMMAND_TIMEOUT};
       - AppSettings__ApplicationTitle=${APP_TITLE}
-      - Serilog__WriteTo__1__Name=Seq
-      - Serilog__WriteTo__1__Args__serverUrl=${SEQ_URL}
-      - Serilog__WriteTo__1__Args__apiKey=${SEQ_API_KEY}
+      - Seq__ServerUrl=${SEQ_URL}
+      - Seq__ApiKey=${SEQ_API_KEY}
     networks:
       - greasemonkey-network
 
