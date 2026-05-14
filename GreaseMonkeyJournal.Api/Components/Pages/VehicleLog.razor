@@ -26,11 +26,11 @@
                                 <thead>
                                     <tr>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Date))">Date <i class="bi @GetSortIcon(nameof(LogEntry.Date))"></i></th>
-                                        <th role="button" @onclick="() => SortBy("Vehicle")">Vehicle <i class="bi @GetSortIcon("Vehicle")"></i></th>
+                                        <th role="button" @onclick="() => SortBy(VehicleColumn)">Vehicle <i class="bi @GetSortIcon(VehicleColumn)"></i></th>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Description))">Description <i class="bi @GetSortIcon(nameof(LogEntry.Description))"></i></th>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Type))">Type <i class="bi @GetSortIcon(nameof(LogEntry.Type))"></i></th>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Cost))">Cost <i class="bi @GetSortIcon(nameof(LogEntry.Cost))"></i></th>
-                                        <th role="button" @onclick="() => SortBy("Reading")">Reading <i class="bi @GetSortIcon("Reading")"></i></th>
+                                        <th role="button" @onclick="() => SortBy(ReadingColumn)">Reading <i class="bi @GetSortIcon(ReadingColumn)"></i></th>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Notes))">Notes <i class="bi @GetSortIcon(nameof(LogEntry.Notes))"></i></th>
                                         <th>Actions</th>
                                     </tr>
@@ -106,6 +106,9 @@
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
+
+    private const string VehicleColumn = "Vehicle";
+    private const string ReadingColumn = "Reading";
 
     private IEnumerable<LogEntry> logEntries = new List<LogEntry>();
     private IEnumerable<LogEntry> sortedEntries => ApplySort(logEntries);
