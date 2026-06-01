@@ -1,83 +1,358 @@
-@page "/settings"
+﻿@page "/settings"
+@using GreaseMonkeyJournal.Api.Components.Models
 @using GreaseMonkeyJournal.Api.Components.Services
+@inject IUserSettingsService UserSettingsService
+@inject INotificationSettingsService NotificationSettingsService
+@inject INotificationDispatcherService NotificationDispatcher
+@inject IWebHostEnvironment HostEnvironment
+@rendermode InteractiveServer
 
-<PageTitle>Settings</PageTitle>
+<PageTitle>Settings - Grease Monkey Journal</PageTitle>
 
-<div class="container-fluid">
+<div class="container mt-4">
     <div class="row">
-        <div class="col-12 col-lg-8 col-xl-6">
+        <div class="col-12 col-lg-8 mx-auto">
+
             <div class="card fade-in">
                 <div class="card-header">
                     <h5 class="card-title mb-0"><i class="bi bi-gear me-2"></i>Settings</h5>
                 </div>
+
                 <div class="card-body">
-                    <EditForm Model="this" OnValidSubmit="SaveSettingsAsync">
-                        <div class="mb-3">
-                            <label for="currencyCode" class="form-label">Currency for costs</label>
-                            <select id="currencyCode" class="form-select" @bind="currencyCode">
-                                @foreach (var currency in CurrencyOptions)
+                    <div class="d-flex gap-2 mb-4 pb-3 border-bottom">
+                        <button type="button"
+                                class="btn btn-sm rounded-pill @(activeTab == "general" ? "btn-primary" : "btn-outline-primary")"
+                                @onclick=@(() => activeTab = "general")>
+                            <i class="bi bi-sliders me-1"></i>General
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm rounded-pill @(activeTab == "notifications" ? "btn-primary" : "btn-outline-primary")"
+                                @onclick=@(() => activeTab = "notifications")>
+                            <i class="bi bi-bell me-1"></i>Notifications
+                        </button>
+                    </div>
+
+                    @* ── General tab ───────────────────────────── *@
+                    <div class="@(activeTab == "general" ? "" : "d-none")">
+                        <EditForm Model="this" OnValidSubmit="SaveCurrencyAsync">
+                            <div class="mb-3">
+                                <label for="currencyCode" class="form-label fw-semibold">Currency for costs</label>
+                                <select id="currencyCode" class="form-select" @bind="currencyCode">
+                                    @foreach (var currency in CurrencyOptions)
+                                    {
+                                        <option value="@currency.Code">@currency.Label</option>
+                                    }
+                                </select>
+                                <div class="form-text">Used when displaying maintenance and repair costs.</div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(currencyMessage))
+                            {
+                                <div class="alert @(currencySuccess ? "alert-success" : "alert-danger") alert-dismissible py-2 mb-3">
+                                    <i class="bi @(currencySuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                    @currencyMessage
+                                    <button type="button" class="btn-close" @onclick=@(() => currencyMessage = string.Empty)></button>
+                                </div>
+                            }
+
+                            <button type="submit" class="btn btn-primary" disabled="@isSavingCurrency">
+                                @if (isSavingCurrency)
                                 {
-                                    <option value="@currency.Code">@currency.Label</option>
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
                                 }
-                            </select>
-                            <div class="form-text">This currency is used when showing maintenance and repair costs.</div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save Settings</button>
-                    </EditForm>
+                                <i class="bi bi-save me-1"></i>Save
+                            </button>
+                        </EditForm>
+                    </div>
+
+                    @* ── Notifications tab ─────────────────────── *@
+                    <div class="@(activeTab == "notifications" ? "" : "d-none")">
+                        @if (isLoading)
+                        {
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        }
+                        else if (notificationSettings != null)
+                        {
+                            <EditForm Model="notificationSettings" OnValidSubmit="SaveEmailSettingsAsync">
+                                <DataAnnotationsValidator />
+
+                                @* Email address *@
+                                <div class="mb-4">
+                                    <label for="email" class="form-label fw-semibold">Recipient email address</label>
+                                    <InputText id="email" class="form-control" @bind-Value="notificationSettings.UserEmail"
+                                               placeholder="your-email@example.com" />
+                                    <ValidationMessage For="@(() => notificationSettings.UserEmail)" class="text-danger small" />
+                                    <div class="form-text">Daily reminder digests will be sent here.</div>
+                                </div>
+
+                                @* Master toggle *@
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox id="isEnabled" class="form-check-input" @bind-Value="notificationSettings.IsEnabled" />
+                                        <label class="form-check-label fw-semibold" for="isEnabled">Enable email notifications</label>
+                                    </div>
+                                    <div class="form-text ms-5">Master switch — turns all reminder emails on or off.</div>
+                                </div>
+
+                                @* Horizon toggles — always rendered, disabled when master is off *@
+                                <div class="ms-4 ps-2 border-start @(notificationSettings.IsEnabled ? "" : "opacity-50")">
+                                    <div class="form-check form-switch mb-2">
+                                        <InputCheckbox id="send7Day" class="form-check-input" @bind-Value="notificationSettings.Send7DayReminders"
+                                                       disabled="@(!notificationSettings.IsEnabled)" />
+                                        <label class="form-check-label" for="send7Day">
+                                            Due in <strong>7 days</strong>
+                                            <span class="text-muted small ms-1">— a week in advance</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <InputCheckbox id="send1Day" class="form-check-input" @bind-Value="notificationSettings.Send1DayReminders"
+                                                       disabled="@(!notificationSettings.IsEnabled)" />
+                                        <label class="form-check-label" for="send1Day">
+                                            Due <strong>tomorrow</strong>
+                                            <span class="text-muted small ms-1">— the day before</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <InputCheckbox id="sendToday" class="form-check-input" @bind-Value="notificationSettings.SendTodayReminders"
+                                                       disabled="@(!notificationSettings.IsEnabled)" />
+                                        <label class="form-check-label" for="sendToday">
+                                            Due <strong>today</strong>
+                                            <span class="text-muted small ms-1">— on the due date</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="text-muted small mb-4">
+                                    <i class="bi bi-clock me-1"></i>Emails are dispatched daily at <strong>7:00 AM</strong> (server time).
+                                    Next scheduled: <strong>@NextDispatchTime</strong>
+                                </div>
+
+                                @* SMTP setup hint — native details/summary, no JS needed *@
+                                <details class="mb-4">
+                                    <summary class="text-muted small" style="cursor: pointer;">
+                                        <i class="bi bi-question-circle me-1"></i>How to configure SMTP
+                                    </summary>
+                                    <div class="mt-2 ps-3 border-start small">
+                                        <p class="mb-1 fw-semibold">Gmail</p>
+                                        <p class="mb-0 text-muted">Enable 2-Step Verification, generate an <a href="https://myaccount.google.com/apppasswords" target="_blank">App Password</a>, then set:</p>
+                                        <code class="d-block mt-1">SMTP_HOST=smtp.gmail.com &nbsp; SMTP_PORT=587 &nbsp; SMTP_ENABLE_SSL=true</code>
+                                        <p class="mb-1 fw-semibold mt-2">Outlook / Hotmail</p>
+                                        <code class="d-block">SMTP_HOST=smtp-mail.outlook.com &nbsp; SMTP_PORT=587</code>
+                                        <p class="mb-0 mt-2 text-muted">Set <code>SMTP_USERNAME</code>, <code>SMTP_PASSWORD</code>, and <code>SMTP_FROM_EMAIL</code> in your <code>.env</code> file.</p>
+                                    </div>
+                                </details>
+
+                                @if (!string.IsNullOrEmpty(message))
+                                {
+                                    <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible py-2 mb-3">
+                                        <i class="bi @(isSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                        @message
+                                        <button type="button" class="btn-close" @onclick="ClearMessage"></button>
+                                    </div>
+                                }
+
+                                <div class="d-flex align-items-center gap-3">
+                                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="bi bi-save me-1"></i>Save
+                                    </button>
+                                    <span class="text-muted small">
+                                        Last saved: @notificationSettings.UpdatedAt.ToLocalTime().ToString("g")
+                                    </span>
+                                </div>
+                            </EditForm>
+                        }
+                    </div>
+
                 </div>
             </div>
+
+            @* Developer Tools — only visible in Development *@
+            @if (HostEnvironment.IsDevelopment())
+            {
+                <div class="card mt-3 border-warning">
+                    <div class="card-header bg-warning bg-opacity-25 d-flex align-items-center gap-2">
+                        <i class="bi bi-bug"></i>
+                        <span class="fw-semibold">Developer Tools</span>
+                        <span class="badge bg-warning text-dark ms-auto">Dev only</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Trigger the notification dispatch immediately — no need to wait for the 7 AM schedule.
+                            Caught emails appear in <a href="http://localhost:1080" target="_blank">MailDev</a>.
+                        </p>
+                        <button class="btn btn-outline-warning" @onclick="TriggerNotificationsNow" disabled="@isTriggeringNotifications">
+                            @if (isTriggeringNotifications)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-send me-1"></i>
+                            }
+                            Send Test Notifications Now
+                        </button>
+
+                        @if (!string.IsNullOrEmpty(triggerMessage))
+                        {
+                            <div class="alert @(triggerSuccess ? "alert-success" : "alert-danger") alert-dismissible py-2 mt-3 mb-0">
+                                <i class="bi @(triggerSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                @triggerMessage
+                                <button type="button" class="btn-close" @onclick=@(() => triggerMessage = string.Empty)></button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
         </div>
     </div>
 </div>
 
-@if (showSuccessMessage)
-{
-    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
-        <div class="toast show" role="alert">
-            <div class="toast-header bg-success text-white">
-                <i class="bi bi-check-circle me-2"></i>
-                <strong class="me-auto">Success</strong>
-                <button type="button" class="btn-close btn-close-white" @onclick="() => showSuccessMessage = false"></button>
-            </div>
-            <div class="toast-body">
-                Settings saved.
-            </div>
-        </div>
-    </div>
-}
-
 @code {
-    [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
+    private string activeTab = "general";
 
+    // --- General (currency) ---
     private string currencyCode = "USD";
-    private bool showSuccessMessage;
+    private bool isSavingCurrency;
+    private string currencyMessage = string.Empty;
+    private bool currencySuccess;
 
     private static readonly List<CurrencyOption> CurrencyOptions =
     [
         new("USD", "USD ($)"),
-        new("EUR", "EUR (€)"),
-        new("GBP", "GBP (£)"),
+        new("EUR", "EUR (\u20ac)"),
+        new("GBP", "GBP (\u00a3)"),
         new("SEK", "SEK (kr)")
     ];
 
+    // --- Notifications ---
+    private NotificationSettings? notificationSettings;
+    private bool isLoading = true;
+    private bool isSaving;
+    private string message = string.Empty;
+    private bool isSuccess;
+
+    // --- Dev trigger ---
+    private bool isTriggeringNotifications;
+    private string triggerMessage = string.Empty;
+    private bool triggerSuccess;
+
+    private static string NextDispatchTime
+    {
+        get
+        {
+            var now = DateTime.Now;
+            var next = DateTime.Today.AddHours(7);
+            if (now >= next) next = next.AddDays(1);
+            return next.ToString("ddd, MMM d 'at' h:mm tt");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-            return;
-
+        if (!firstRender) return;
         currencyCode = await UserSettingsService.GetCurrencyCodeAsync();
         StateHasChanged();
     }
 
-    private async Task SaveSettingsAsync()
+    private async Task SaveCurrencyAsync()
     {
-        await UserSettingsService.SetCurrencyCodeAsync(currencyCode);
+        isSavingCurrency = true;
+        currencyMessage = string.Empty;
+        try
+        {
+            await UserSettingsService.SetCurrencyCodeAsync(currencyCode);
+            currencyMessage = "Display settings saved.";
+            currencySuccess = true;
+        }
+        catch (Exception ex)
+        {
+            currencyMessage = $"Error saving: {ex.Message}";
+            currencySuccess = false;
+        }
+        finally
+        {
+            isSavingCurrency = false;
+        }
+    }
 
-        showSuccessMessage = true;
-        StateHasChanged();
-        await Task.Delay(2500);
-        showSuccessMessage = false;
-        StateHasChanged();
+    private async Task LoadSettings()
+    {
+        isLoading = true;
+        try
+        {
+            notificationSettings = await NotificationSettingsService.GetOrCreateDefaultAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error loading settings: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveEmailSettingsAsync()
+    {
+        if (notificationSettings == null) return;
+
+        isSaving = true;
+        message = string.Empty;
+        try
+        {
+            await NotificationSettingsService.SaveAsync(notificationSettings);
+            message = "Notification settings saved.";
+            isSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            message = $"Error saving settings: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ClearMessage() => message = string.Empty;
+
+    private async Task TriggerNotificationsNow()
+    {
+        isTriggeringNotifications = true;
+        triggerMessage = string.Empty;
+        try
+        {
+            var count = await NotificationDispatcher.SendRemindersAsync();
+            triggerMessage = count > 0
+                ? $"Sent {count} email(s). Check MailDev at http://localhost:1080."
+                : "No emails sent — make sure notifications are enabled and there are active reminders.";
+            triggerSuccess = count > 0;
+        }
+        catch (Exception ex)
+        {
+            triggerMessage = $"Dispatch failed: {ex.Message}";
+            triggerSuccess = false;
+        }
+        finally
+        {
+            isTriggeringNotifications = false;
+        }
     }
 
     private record CurrencyOption(string Code, string Label);

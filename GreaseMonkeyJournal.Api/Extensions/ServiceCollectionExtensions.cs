@@ -28,6 +28,15 @@ public static class ServiceCollectionExtensions
         // Register user settings service
         services.AddScoped<IUserSettingsService, UserSettingsService>();
         
+        // Register email services
+        services.AddScoped<IEmailService, EmailService>();
+        
+        // Register notification settings services
+        services.AddScoped<INotificationSettingsService, NotificationSettingsService>();
+        
+        // Register notification dispatcher (used by background service and dev trigger)
+        services.AddScoped<INotificationDispatcherService, NotificationDispatcherService>();
+        
         return services;
     }
 

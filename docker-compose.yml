@@ -35,6 +35,18 @@ services:
     networks:
       - greasemonkey-network
 
+  maildev:
+    image: maildev/maildev
+    container_name: greasemonkey-maildev
+    ports:
+      - "1080:1080"  # Web UI
+      - "1025:1025"  # SMTP Server
+    networks:
+      - greasemonkey-network
+    environment:
+      - MAILDEV_WEB_PORT=1080
+      - MAILDEV_SMTP_PORT=1025
+
   greasemonkeyjournal.api:
     image: ${DOCKER_REGISTRY-}greasemonkeyjournalapi
     build:
@@ -47,12 +59,21 @@ services:
         condition: service_healthy
       seq:
         condition: service_started
+      maildev:
+        condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ConnectionStrings__MariaDbConnection=server=${DB_SERVER};port=${DB_PORT};database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD};Connect Timeout=${DB_CONNECTION_TIMEOUT};Command Timeout=${DB_COMMAND_TIMEOUT};Default Command Timeout=${DB_COMMAND_TIMEOUT};
       - AppSettings__ApplicationTitle=${APP_TITLE}
       - Seq__ServerUrl=${SEQ_URL}
       - Seq__ApiKey=${SEQ_API_KEY}
+      - EmailSettings__SmtpHost=${SMTP_HOST}
+      - EmailSettings__SmtpPort=${SMTP_PORT}
+      - EmailSettings__EnableSsl=${SMTP_ENABLE_SSL}
+      - EmailSettings__SmtpUsername=${SMTP_USERNAME}
+      - EmailSettings__SmtpPassword=${SMTP_PASSWORD}
+      - EmailSettings__FromEmail=${SMTP_FROM_EMAIL}
+      - EmailSettings__FromName=${SMTP_FROM_NAME}
     networks:
       - greasemonkey-network
 
