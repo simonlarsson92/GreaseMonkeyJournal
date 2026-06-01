@@ -74,9 +74,12 @@ Write-Host "SUCCESS: Development environment is ready!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Access the application at: " -NoNewline -ForegroundColor White
 Write-Host "http://localhost:8080" -ForegroundColor Cyan
-Write-Host "Health check endpoint: " -NoNewline -ForegroundColor White
+Write-Host "Health check endpoint:    " -NoNewline -ForegroundColor White
 Write-Host "http://localhost:8080/health" -ForegroundColor Cyan
-Write-Host "MariaDB accessible on: " -NoNewline -ForegroundColor White
+Write-Host "MailDev email catcher:    " -NoNewline -ForegroundColor White
+Write-Host "http://localhost:1080" -ForegroundColor Cyan
+Write-Host "  (use Settings > Developer Tools to trigger a test email)" -ForegroundColor DarkGray
+Write-Host "MariaDB accessible on:    " -NoNewline -ForegroundColor White
 Write-Host "localhost:3306" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Useful commands:" -ForegroundColor Yellow

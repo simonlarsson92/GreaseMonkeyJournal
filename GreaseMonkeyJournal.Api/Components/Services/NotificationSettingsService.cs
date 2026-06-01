@@ -31,23 +31,26 @@ public class NotificationSettingsService : INotificationSettingsService
 
     public async Task<NotificationSettings> SaveAsync(NotificationSettings settings)
     {
-        var existing = await GetByEmailAsync(settings.UserEmail);
-        
+        // Prefer lookup by ID so that changing the email address updates the existing
+        // record rather than creating a duplicate (email is unique but can be edited).
+        NotificationSettings? existing = settings.Id > 0
+            ? await _context.NotificationSettings.FindAsync(settings.Id)
+            : await GetByEmailAsync(settings.UserEmail);
+
         if (existing != null)
         {
-            // Update existing
+            existing.UserEmail = settings.UserEmail;
             existing.IsEnabled = settings.IsEnabled;
             existing.Send7DayReminders = settings.Send7DayReminders;
             existing.Send1DayReminders = settings.Send1DayReminders;
             existing.SendTodayReminders = settings.SendTodayReminders;
             existing.UpdatedAt = DateTime.UtcNow;
-            
+
             await _context.SaveChangesAsync();
             return existing;
         }
         else
         {
-            // Create new
             settings.CreatedAt = DateTime.UtcNow;
             settings.UpdatedAt = DateTime.UtcNow;
             _context.NotificationSettings.Add(settings);

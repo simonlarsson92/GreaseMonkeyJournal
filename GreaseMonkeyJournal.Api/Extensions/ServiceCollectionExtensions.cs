@@ -34,6 +34,9 @@ public static class ServiceCollectionExtensions
         // Register notification settings services
         services.AddScoped<INotificationSettingsService, NotificationSettingsService>();
         
+        // Register notification dispatcher (used by background service and dev trigger)
+        services.AddScoped<INotificationDispatcherService, NotificationDispatcherService>();
+        
         return services;
     }
 

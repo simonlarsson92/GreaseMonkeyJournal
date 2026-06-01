@@ -3,6 +3,8 @@
 @using GreaseMonkeyJournal.Api.Components.Services
 @inject IUserSettingsService UserSettingsService
 @inject INotificationSettingsService NotificationSettingsService
+@inject INotificationDispatcherService NotificationDispatcher
+@inject IWebHostEnvironment HostEnvironment
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
@@ -178,6 +180,44 @@
             </div>
         </div>
     </div>
+
+    @if (HostEnvironment.IsDevelopment())
+    {
+        <div class="row mt-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-bug me-2"></i>Developer Tools</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            These tools are only visible in the <strong>Development</strong> environment.
+                            Use them to test email notifications without waiting for the scheduled 7 AM dispatch.
+                        </p>
+                        <button class="btn btn-warning" @onclick="TriggerNotificationsNow" disabled="@isTriggeringNotifications">
+                            @if (isTriggeringNotifications)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-send me-2"></i>
+                            }
+                            Send Test Notifications Now
+                        </button>
+
+                        @if (!string.IsNullOrEmpty(triggerMessage))
+                        {
+                            <div class="alert @(triggerSuccess ? "alert-success" : "alert-danger") mt-3 mb-0">
+                                <i class="bi @(triggerSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                @triggerMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @if (showCurrencySaved)
@@ -214,6 +254,11 @@
     private string message = string.Empty;
     private bool isSuccess = false;
     private bool isHelpCollapsed = true;
+
+    // Dev trigger state
+    private bool isTriggeringNotifications = false;
+    private string triggerMessage = string.Empty;
+    private bool triggerSuccess = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -302,6 +347,30 @@
     {
         isHelpCollapsed = !isHelpCollapsed;
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "settingsHelpCollapsed", isHelpCollapsed);
+    }
+
+    private async Task TriggerNotificationsNow()
+    {
+        isTriggeringNotifications = true;
+        triggerMessage = string.Empty;
+
+        try
+        {
+            var count = await NotificationDispatcher.SendRemindersAsync();
+            triggerMessage = count > 0
+                ? $"Done! Sent {count} email(s). Check MailDev at http://localhost:1080 to inspect them."
+                : "Dispatch ran but no emails were sent. Make sure notifications are enabled and there are active reminders.";
+            triggerSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            triggerMessage = $"Dispatch failed: {ex.Message}";
+            triggerSuccess = false;
+        }
+        finally
+        {
+            isTriggeringNotifications = false;
+        }
     }
 
     private record CurrencyOption(string Code, string Label);
