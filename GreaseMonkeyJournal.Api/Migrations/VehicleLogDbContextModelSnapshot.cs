@@ -3,6 +3,7 @@ using System;
 using GreaseMonkeyJournal.Api.Components.DbContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -16,14 +17,18 @@ namespace GreaseMonkeyJournal.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "9.0.16")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
             modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Cost")
                         .HasColumnType("decimal(65,30)");
@@ -60,6 +65,8 @@ namespace GreaseMonkeyJournal.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -98,6 +105,8 @@ namespace GreaseMonkeyJournal.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -131,6 +140,11 @@ namespace GreaseMonkeyJournal.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Make")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -143,7 +157,13 @@ namespace GreaseMonkeyJournal.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("SerialNumber")
+                        .HasColumnType("longtext");
+
                     b.Property<int>("SpeedometerType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VehicleType")
                         .HasColumnType("int");
 
                     b.Property<int>("Year")
@@ -152,6 +172,31 @@ namespace GreaseMonkeyJournal.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Vehicles");
+                });
+
+            modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.VehicleInfoCard", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Details")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("VehicleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("VehicleInfoCards");
                 });
 
             modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogEntry", b =>
@@ -176,8 +221,21 @@ namespace GreaseMonkeyJournal.Migrations
                     b.Navigation("Vehicle");
                 });
 
+            modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.VehicleInfoCard", b =>
+                {
+                    b.HasOne("GreaseMonkeyJournal.Api.Components.Models.Vehicle", "Vehicle")
+                        .WithMany("InfoCards")
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Vehicle");
+                });
+
             modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.Vehicle", b =>
                 {
+                    b.Navigation("InfoCards");
+
                     b.Navigation("Reminders");
                 });
 #pragma warning restore 612, 618

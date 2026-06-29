@@ -26,7 +26,8 @@
                                         <th>Make</th>
                                         <th>Model</th>
                                         <th>Year</th>
-                                        <th>Registration</th>
+                                        <th>Type</th>
+                                        <th>Reg. / Serial</th>
                                         <th>Speedometer</th>
                                         <th>Actions</th>
                                     </tr>
@@ -35,13 +36,19 @@
                                     @foreach (var vehicle in vehicles)
                                     {
                                         <tr>
-                                            <td>@vehicle.Make</td>
+                                            <td>
+                                                <a href="/vehicle/@vehicle.Id" class="fw-semibold text-decoration-none">@vehicle.Make</a>
+                                            </td>
                                             <td>@vehicle.Model</td>
                                             <td>@vehicle.Year</td>
-                                            <td>@vehicle.Registration</td>
+                                            <td>@vehicle.VehicleType.ToDisplayName()</td>
+                                            <td>@(vehicle.GetIdentifierDisplay())</td>
                                             <td>@GetSpeedometerTypeDisplay(vehicle.SpeedometerType)</td>
                                             <td>
                                                 <div class="d-flex gap-2">
+                                                    <a href="/vehicle/@vehicle.Id" class="btn btn-sm btn-outline-success">
+                                                        <i class="bi bi-eye me-1"></i>View
+                                                    </a>
                                                     <a href="/vehicle/@vehicle.Id/logs" class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-journal-text me-1"></i>Logs
                                                     </a>
