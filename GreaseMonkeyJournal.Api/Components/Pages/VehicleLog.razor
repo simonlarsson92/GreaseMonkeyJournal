@@ -40,7 +40,7 @@
                                     {
                                         <tr>
                                             <td>@entry.Date?.ToShortDateString()</td>
-                                            <td>@entry.Vehicle?.Make @entry.Vehicle?.Model (@entry.Vehicle?.Registration)</td>
+                                            <td>@entry.Vehicle?.Make @entry.Vehicle?.Model @(entry.Vehicle?.GetIdentifierParenthetical())</td>
                                             <td>@entry.Description</td>
                                             <td>
                                                 <span class="badge @(entry.Type == "repair" ? "bg-warning" : "bg-success")">

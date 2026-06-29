@@ -48,9 +48,29 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="registration" class="form-label">Registration *</label>
-                                <input type="text" class="form-control" id="registration" @bind="vehicle.Registration" required />
+                                <label for="vehicleType" class="form-label">Vehicle Type *</label>
+                                <select id="vehicleType" class="form-select" @bind="vehicle.VehicleType" required>
+                                    @foreach (var type in Enum.GetValues<VehicleType>())
+                                    {
+                                        <option value="@type">@type.ToDisplayName()</option>
+                                    }
+                                </select>
                             </div>
+
+                            @if (vehicle.VehicleType == VehicleType.TractorImplement)
+                            {
+                                <div class="mb-3">
+                                    <label for="serialNumber" class="form-label">Serial Number</label>
+                                    <input type="text" class="form-control" id="serialNumber" @bind="vehicle.SerialNumber" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label for="registration" class="form-label">Registration *</label>
+                                    <input type="text" class="form-control" id="registration" @bind="vehicle.Registration" required />
+                                </div>
+                            }
 
                             <div class="mb-3">
                                 <label for="speedometerType" class="form-label">Speedometer Type *</label>
@@ -60,6 +80,11 @@
                                     <option value="@SpeedometerType.KM">Kilometers</option>
                                     <option value="@SpeedometerType.Hours">Hours</option>
                                 </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" rows="3" maxlength="1000" @bind="vehicle.Description"></textarea>
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100">
@@ -108,11 +133,22 @@
     {
         if (vehicle != null)
         {
+            NormalizeIdentifiers();
             await VehicleService.UpdateAsync(vehicle);
             showSuccessMessage = true;
             StateHasChanged();
             await Task.Delay(2000);
             Navigation.NavigateTo("/vehicles");
         }
+    }
+
+    // Tractor Implements use a serial number instead of a registration; keep only the relevant one.
+    private void NormalizeIdentifiers()
+    {
+        if (vehicle == null) return;
+        if (vehicle.VehicleType == VehicleType.TractorImplement)
+            vehicle.Registration = string.Empty;
+        else
+            vehicle.SerialNumber = null;
     }
 }

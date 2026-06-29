@@ -10,6 +10,7 @@ public class VehicleLogDbContext : Microsoft.EntityFrameworkCore.DbContext
     public DbSet<LogEntry> LogEntries { get; set; } = default!;
     public DbSet<Reminder> Reminders { get; set; } = default!;
     public DbSet<NotificationSettings> NotificationSettings { get; set; } = default!;
+    public DbSet<VehicleInfoCard> VehicleInfoCards { get; set; } = default!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Vehicle>().HasKey(v => v.Id);
@@ -30,5 +31,12 @@ public class VehicleLogDbContext : Microsoft.EntityFrameworkCore.DbContext
         modelBuilder.Entity<NotificationSettings>()
             .HasIndex(n => n.UserEmail)
             .IsUnique();
+
+        // VehicleInfoCard relationship
+        modelBuilder.Entity<VehicleInfoCard>().HasKey(c => c.Id);
+        modelBuilder.Entity<VehicleInfoCard>()
+            .HasOne(c => c.Vehicle)
+            .WithMany(v => v.InfoCards)
+            .HasForeignKey(c => c.VehicleId);
     }
 }
