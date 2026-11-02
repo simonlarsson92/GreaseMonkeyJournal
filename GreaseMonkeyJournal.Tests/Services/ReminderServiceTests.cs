@@ -34,7 +34,7 @@ public class ReminderServiceTests
                 Id = 1, 
                 VehicleId = 1, 
                 Description = "Oil Change", 
-                DueDate = DateTime.Now.AddDays(30),
+                DueDate = DateTime.UtcNow.AddDays(30),
                 Type = "Maintenance",
                 IsCompleted = false,
                 DueSpeedometerReading = 20000
@@ -44,7 +44,7 @@ public class ReminderServiceTests
                 Id = 2, 
                 VehicleId = 1, 
                 Description = "Tire Rotation", 
-                DueDate = DateTime.Now.AddDays(60),
+                DueDate = DateTime.UtcNow.AddDays(60),
                 Type = "Maintenance",
                 IsCompleted = false,
                 DueSpeedometerReading = 25000
@@ -121,7 +121,7 @@ public class ReminderServiceTests
             VehicleId = 1,
             Description = "Brake Inspection",
             Type = "Maintenance",
-            DueDate = DateTime.Now.AddDays(90),
+            DueDate = DateTime.UtcNow.AddDays(90),
             IsCompleted = false
         };
         

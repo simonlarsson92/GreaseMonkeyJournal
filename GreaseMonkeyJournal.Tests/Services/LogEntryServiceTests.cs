@@ -35,7 +35,7 @@ public class LogEntryServiceTests
                 Id = 1, 
                 VehicleId = 1, 
                 Description = "Oil Change", 
-                Date = DateTime.Now.AddDays(-30),
+                Date = DateTime.UtcNow.AddDays(-30),
                 Type = "maintenance",
                 Cost = 50.00m,
                 SpeedometerReading = 15000
@@ -45,7 +45,7 @@ public class LogEntryServiceTests
                 Id = 2, 
                 VehicleId = 1, 
                 Description = "Brake Repair", 
-                Date = DateTime.Now.AddDays(-60),
+                Date = DateTime.UtcNow.AddDays(-60),
                 Type = "repair",
                 Cost = 200.00m,
                 SpeedometerReading = 14000
@@ -136,7 +136,7 @@ public class LogEntryServiceTests
         {
             VehicleId = 1,
             Description = "Tire Replacement",
-            Date = DateTime.Now,
+            Date = DateTime.UtcNow,
             Type = "maintenance",
             Cost = 400.00m,
             SpeedometerReading = 16000
