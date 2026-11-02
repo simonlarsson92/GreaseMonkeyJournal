@@ -19,12 +19,16 @@ public class VehicleLogDbContext : Microsoft.EntityFrameworkCore.DbContext
             .HasOne(l => l.Vehicle)
             .WithMany()
             .HasForeignKey(l => l.VehicleId);
+        modelBuilder.Entity<LogEntry>()
+            .HasIndex(l => l.VehicleId);
         // Reminder relationship
         modelBuilder.Entity<Reminder>().HasKey(r => r.Id);
         modelBuilder.Entity<Reminder>()
             .HasOne(r => r.Vehicle)
             .WithMany(v => v.Reminders)
             .HasForeignKey(r => r.VehicleId);
+        modelBuilder.Entity<Reminder>()
+            .HasIndex(r => r.VehicleId);
         
         // NotificationSettings configuration
         modelBuilder.Entity<NotificationSettings>().HasKey(n => n.Id);
@@ -38,5 +42,7 @@ public class VehicleLogDbContext : Microsoft.EntityFrameworkCore.DbContext
             .HasOne(c => c.Vehicle)
             .WithMany(v => v.InfoCards)
             .HasForeignKey(c => c.VehicleId);
+        modelBuilder.Entity<VehicleInfoCard>()
+            .HasIndex(c => c.VehicleId);
     }
 }
