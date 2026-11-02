@@ -1,34 +1,42 @@
+using GreaseMonkeyJournal.Api.Components.Models;
+using Microsoft.Extensions.Options;
+
 namespace GreaseMonkeyJournal.Api.Components.Services;
 
 /// <summary>
-/// Background service that sends daily reminder notifications at 7:00 AM (server local time).
-/// Note: when running inside Docker on a UTC host, 7 AM refers to 7 AM UTC.
-/// Adjust the server timezone or modify <see cref="CalculateDelayUntilNext7AM"/> as needed.
+/// Background service that sends daily reminder notifications at a configurable hour
+/// (default 7:00 AM). Set <c>AppSettings:NotificationDispatchHour</c> in appsettings.json
+/// to change the dispatch time. When running in Docker (UTC), set the value to the desired UTC hour.
 /// </summary>
 public class ReminderNotificationBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ReminderNotificationBackgroundService> _logger;
+    private readonly int _dispatchHour;
 
     public ReminderNotificationBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger<ReminderNotificationBackgroundService> logger)
+        ILogger<ReminderNotificationBackgroundService> logger,
+        IOptions<AppSettings> appSettings)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _dispatchHour = appSettings.Value.NotificationDispatchHour;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Reminder Notification Background Service started");
+        _logger.LogInformation(
+            "Reminder Notification Background Service started (dispatch hour: {Hour:D2}:00)",
+            _dispatchHour);
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var delay = CalculateDelayUntilNext7AM();
-            var next7AM = DateTime.Now.Add(delay);
+            var delay = CalculateDelayUntilNextDispatch();
+            var nextDispatch = DateTime.Now.Add(delay);
             _logger.LogInformation(
                 "Next notification dispatch scheduled for {Time} (in {Delay:hh\\:mm\\:ss})",
-                next7AM, delay);
+                nextDispatch, delay);
 
             try
             {
@@ -58,12 +66,12 @@ public class ReminderNotificationBackgroundService : BackgroundService
         _logger.LogInformation("Reminder Notification Background Service stopped");
     }
 
-    private static TimeSpan CalculateDelayUntilNext7AM()
+    private TimeSpan CalculateDelayUntilNextDispatch()
     {
         var now = DateTime.Now;
-        var next7AM = DateTime.Today.AddHours(7);
-        if (now >= next7AM)
-            next7AM = next7AM.AddDays(1);
-        return next7AM - now;
+        var nextDispatch = DateTime.Today.AddHours(_dispatchHour);
+        if (now >= nextDispatch)
+            nextDispatch = nextDispatch.AddDays(1);
+        return nextDispatch - now;
     }
 }
