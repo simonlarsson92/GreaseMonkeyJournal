@@ -32,7 +32,7 @@ public class ReminderNotificationBackgroundService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var delay = CalculateDelayUntilNextDispatch();
+            var delay = CalculateDelay();
             var nextDispatch = DateTime.Now.Add(delay);
             _logger.LogInformation(
                 "Next notification dispatch scheduled for {Time} (in {Delay:hh\\:mm\\:ss})",
@@ -66,7 +66,7 @@ public class ReminderNotificationBackgroundService : BackgroundService
         _logger.LogInformation("Reminder Notification Background Service stopped");
     }
 
-    private TimeSpan CalculateDelayUntilNextDispatch()
+    protected virtual TimeSpan CalculateDelay()
     {
         var now = DateTime.Now;
         var nextDispatch = DateTime.Today.AddHours(_dispatchHour);
