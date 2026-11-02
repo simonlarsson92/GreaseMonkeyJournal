@@ -59,7 +59,7 @@ public class NotificationDispatcherService : INotificationDispatcherService
         NotificationSettings settings,
         List<Reminder> allReminders)
     {
-        var today = DateTime.Today;
+        var today = DateTime.UtcNow.Date;
         var tomorrow = today.AddDays(1);
         var in7Days = today.AddDays(7);
 
