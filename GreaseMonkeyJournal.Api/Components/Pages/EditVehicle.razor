@@ -57,7 +57,7 @@
                                 </select>
                             </div>
 
-                            @if (vehicle.VehicleType == VehicleType.TractorImplement)
+                            @if (vehicle.VehicleType.UsesSerialNumber())
                             {
                                 <div class="mb-3">
                                     <label for="serialNumber" class="form-label">Serial Number</label>
@@ -142,11 +142,10 @@
         }
     }
 
-    // Tractor Implements use a serial number instead of a registration; keep only the relevant one.
     private void NormalizeIdentifiers()
     {
         if (vehicle == null) return;
-        if (vehicle.VehicleType == VehicleType.TractorImplement)
+        if (vehicle.VehicleType.UsesSerialNumber())
             vehicle.Registration = string.Empty;
         else
             vehicle.SerialNumber = null;
