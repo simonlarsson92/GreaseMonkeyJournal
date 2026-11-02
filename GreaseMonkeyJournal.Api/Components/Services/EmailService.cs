@@ -27,37 +27,56 @@ public class EmailService : IEmailService
             return;
         }
 
-        try
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromEmail));
+        message.To.Add(new MailboxAddress("", toEmail));
+        message.Subject = "Vehicle Maintenance Reminders - Grease Monkey Journal";
+
+        var bodyBuilder = new BodyBuilder { HtmlBody = BuildHtmlEmailBody(reminders) };
+        message.Body = bodyBuilder.ToMessageBody();
+
+        const int MaxAttempts = 3;
+        Exception? lastException = null;
+
+        for (int attempt = 1; attempt <= MaxAttempts; attempt++)
         {
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromEmail));
-            message.To.Add(new MailboxAddress("", toEmail));
-            message.Subject = "Vehicle Maintenance Reminders - Grease Monkey Journal";
-
-            var bodyBuilder = new BodyBuilder
+            try
             {
-                HtmlBody = BuildHtmlEmailBody(reminders)
-            };
-            message.Body = bodyBuilder.ToMessageBody();
+                using var client = new SmtpClient();
+                await client.ConnectAsync(_emailSettings.SmtpHost, _emailSettings.SmtpPort, _emailSettings.EnableSsl);
 
-            using var client = new SmtpClient();
-            await client.ConnectAsync(_emailSettings.SmtpHost, _emailSettings.SmtpPort, _emailSettings.EnableSsl);
-            
-            if (!string.IsNullOrWhiteSpace(_emailSettings.SmtpUsername))
-            {
-                await client.AuthenticateAsync(_emailSettings.SmtpUsername, _emailSettings.SmtpPassword);
+                if (!string.IsNullOrWhiteSpace(_emailSettings.SmtpUsername))
+                    await client.AuthenticateAsync(_emailSettings.SmtpUsername, _emailSettings.SmtpPassword);
+
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+
+                _logger.LogInformation("Reminder email sent successfully to {Email}", toEmail);
+                return;
             }
-
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
-
-            _logger.LogInformation("Reminder email sent successfully to {Email}", toEmail);
+            catch (MailKit.Security.AuthenticationException ex)
+            {
+                _logger.LogError(ex, "Authentication failed sending email to {Email} — not retrying", toEmail);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt < MaxAttempts)
+                {
+                    _logger.LogWarning(ex, "Attempt {Attempt}/{Max} failed sending email to {Email} — retrying in 2s",
+                        attempt, MaxAttempts, toEmail);
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                }
+                else
+                {
+                    _logger.LogError(ex, "All {Max} attempts failed sending email to {Email}", MaxAttempts, toEmail);
+                }
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send reminder email to {Email}", toEmail);
-            throw;
-        }
+
+        throw new InvalidOperationException(
+            $"Failed to send reminder email to {toEmail} after {MaxAttempts} attempts.", lastException);
     }
 
     private string BuildHtmlEmailBody(Dictionary<string, List<Reminder>> reminders)
