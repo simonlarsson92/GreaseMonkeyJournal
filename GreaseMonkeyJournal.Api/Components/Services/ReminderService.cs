@@ -355,6 +355,7 @@ namespace GreaseMonkeyJournal.Api.Components.Services
             if (!recreate && newDueDate.HasValue)
                 throw new ArgumentException("New due date should not be provided when recreate is false.", nameof(newDueDate));
                 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 // Load the reminder with vehicle information for context
@@ -396,6 +397,8 @@ namespace GreaseMonkeyJournal.Api.Components.Services
                     _context.Reminders.Add(newReminder);
                     await _context.SaveChangesAsync();
                 }
+
+                await transaction.CommitAsync();
             }
             catch (ArgumentException)
             {

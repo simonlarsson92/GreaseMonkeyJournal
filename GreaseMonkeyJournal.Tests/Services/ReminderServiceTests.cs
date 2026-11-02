@@ -2,6 +2,7 @@ using GreaseMonkeyJournal.Api.Components.DbContext;
 using GreaseMonkeyJournal.Api.Components.Models;
 using GreaseMonkeyJournal.Api.Components.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -13,6 +14,7 @@ public class ReminderServiceTests
     {
         var options = new DbContextOptionsBuilder<VehicleLogDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         
         var context = new VehicleLogDbContext(options);
