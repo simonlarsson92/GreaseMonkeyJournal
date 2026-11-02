@@ -2,17 +2,17 @@ namespace GreaseMonkeyJournal.Api.Components.Models;
 
 /// <summary>
 /// Display helpers for <see cref="Vehicle"/> that centralize the "which identifier applies"
-/// rule: Tractor Implements are identified by their serial number, all other vehicle types by
-/// their registration. Keeping this in one place avoids inconsistent rendering across pages.
+/// rule: types that use serial numbers are identified by <see cref="VehicleTypeExtensions.UsesSerialNumber"/>.
+/// Keeping this in one place avoids inconsistent rendering across pages.
 /// </summary>
 public static class VehicleExtensions
 {
     /// <summary>
-    /// Returns the identifier relevant to the vehicle's type: the serial number for
-    /// <see cref="VehicleType.TractorImplement"/>, otherwise the registration. May be null/empty.
+    /// Returns the identifier relevant to the vehicle's type: the serial number for types that
+    /// use serial numbers (implements, lawnmowers), otherwise the registration. May be null/empty.
     /// </summary>
     public static string? GetIdentifier(this Vehicle vehicle) =>
-        vehicle.VehicleType == VehicleType.TractorImplement ? vehicle.SerialNumber : vehicle.Registration;
+        vehicle.VehicleType.UsesSerialNumber() ? vehicle.SerialNumber : vehicle.Registration;
 
     /// <summary>
     /// Returns a display string for the vehicle's identifier, or "N/A" when none is set.
@@ -24,7 +24,7 @@ public static class VehicleExtensions
         if (string.IsNullOrWhiteSpace(identifier))
             return "N/A";
 
-        return vehicle.VehicleType == VehicleType.TractorImplement ? $"S/N {identifier}" : identifier;
+        return vehicle.VehicleType.UsesSerialNumber() ? $"S/N {identifier}" : identifier;
     }
 
     /// <summary>

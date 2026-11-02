@@ -52,7 +52,7 @@
                                 <div>@vehicle.Year</div>
                             </div>
                             <div class="col-6 col-md-3">
-                                <div class="text-muted small">@(vehicle.VehicleType == VehicleType.TractorImplement ? "Serial Number" : "Registration")</div>
+                                <div class="text-muted small">@(vehicle.VehicleType.UsesSerialNumber() ? "Serial Number" : "Registration")</div>
                                 <div>@IdentifierValue()</div>
                             </div>
                             <div class="col-6 col-md-3">
