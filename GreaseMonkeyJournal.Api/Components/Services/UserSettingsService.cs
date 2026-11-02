@@ -1,10 +1,12 @@
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Logging;
 
 namespace GreaseMonkeyJournal.Api.Components.Services;
 
 public class UserSettingsService : IUserSettingsService
 {
     private readonly IJSRuntime _jsRuntime;
+    private readonly ILogger<UserSettingsService> _logger;
     private const string CurrencyCodeKey = "currencyCode";
     private const string DefaultCurrencyCode = "USD";
     private static readonly HashSet<string> SupportedCurrencyCodes = new(StringComparer.OrdinalIgnoreCase)
@@ -15,9 +17,10 @@ public class UserSettingsService : IUserSettingsService
         "SEK"
     };
 
-    public UserSettingsService(IJSRuntime jsRuntime)
+    public UserSettingsService(IJSRuntime jsRuntime, ILogger<UserSettingsService> logger)
     {
         _jsRuntime = jsRuntime;
+        _logger = logger;
     }
 
     public async Task<string> GetCurrencyCodeAsync()
@@ -30,8 +33,14 @@ public class UserSettingsService : IUserSettingsService
 
             return SupportedCurrencyCodes.Contains(storedCurrencyCode) ? storedCurrencyCode.ToUpperInvariant() : DefaultCurrencyCode;
         }
-        catch
+        catch (JSException ex)
         {
+            _logger.LogWarning(ex, "JavaScript interop failed while reading currency code from localStorage");
+            return DefaultCurrencyCode;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Currency code read from localStorage was cancelled");
             return DefaultCurrencyCode;
         }
     }
