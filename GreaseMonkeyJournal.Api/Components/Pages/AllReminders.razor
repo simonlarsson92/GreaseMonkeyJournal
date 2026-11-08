@@ -32,7 +32,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var reminder in remindersList)
+                                    @foreach (var reminder in PagedReminders)
                                     {
                                         <tr class="@(IsOverdue(reminder) ? "table-danger" : IsUpcoming(reminder) ? "table-warning" : "")">
                                             <td>@reminder.Vehicle?.Make @reminder.Vehicle?.Model (@reminder.Vehicle?.Registration)</td>
@@ -85,6 +85,27 @@
                                 </tbody>
                             </table>
                         </div>
+                        @if (TotalPages > 1)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <small class="text-muted">
+                                    Showing @PageStart&ndash;@PageEnd of @remindersList.Count entries
+                                </small>
+                                <nav aria-label="Reminders pagination">
+                                    <ul class="pagination pagination-sm mb-0">
+                                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                                            <button class="page-link" @onclick="PreviousPage">Previous</button>
+                                        </li>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">@_currentPage / @TotalPages</span>
+                                        </li>
+                                        <li class="page-item @(_currentPage == TotalPages ? "disabled" : "")">
+                                            <button class="page-link" @onclick="NextPage">Next</button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        }
                     }
                     else
                     {
@@ -120,8 +141,15 @@
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
+    private const int PageSize = 25;
+
     private List<Reminder> remindersList = new();
-    private List<Reminder> _sortedReminders = new();
+    private IEnumerable<Reminder> PagedReminders => remindersList.Skip((_currentPage - 1) * PageSize).Take(PageSize);
+    private int TotalPages => (int)Math.Ceiling(remindersList.Count / (double)PageSize);
+    private int PageStart => remindersList.Any() ? (_currentPage - 1) * PageSize + 1 : 0;
+    private int PageEnd => Math.Min(_currentPage * PageSize, remindersList.Count);
+
+    private int _currentPage = 1;
     private bool showSuccessMessage = false;
     private string successMessage = "";
 
@@ -141,13 +169,23 @@
         return !reminder.IsCompleted && reminder.DueDate >= DateTime.Today && reminder.DueDate <= DateTime.Today.AddDays(7);
     }
 
+    private void PreviousPage()
+    {
+        if (_currentPage > 1) _currentPage--;
+    }
+
+    private void NextPage()
+    {
+        if (_currentPage < TotalPages) _currentPage++;
+    }
+
     private async Task CompleteReminderAsync(Reminder reminder)
     {
         var logDescription = $"Completed: {reminder.Description}";
         var logDate = DateTime.Today;
         bool recreate = false;
         DateTime? newDueDate = null;
-        
+
         if (await JSRuntime.InvokeAsync<bool>("confirm", $"Mark reminder '{reminder.Description}' as complete and create log entry?"))
         {
             recreate = await JSRuntime.InvokeAsync<bool>("confirm", "Recreate this reminder with a new due date?");
@@ -155,13 +193,14 @@
             {
                 newDueDate = DateTime.Today.AddDays(30);
             }
-            
+
             await ReminderService.CompleteReminderAsync(reminder.Id, logDescription, logDate, recreate, newDueDate);
             remindersList = (await ReminderService.GetAllRemindersWithVehicleAsync()).OrderBy(r => r.DueDate).ToList();
+            _currentPage = 1;
             successMessage = "Reminder completed successfully!";
             showSuccessMessage = true;
             StateHasChanged();
-            
+
             await Task.Delay(3000);
             showSuccessMessage = false;
             StateHasChanged();
@@ -174,10 +213,11 @@
         {
             await ReminderService.DeleteReminderAsync(reminder.Id);
             remindersList = (await ReminderService.GetAllRemindersWithVehicleAsync()).OrderBy(r => r.DueDate).ToList();
+            _currentPage = 1;
             successMessage = "Reminder deleted successfully!";
             showSuccessMessage = true;
             StateHasChanged();
-            
+
             await Task.Delay(3000);
             showSuccessMessage = false;
             StateHasChanged();

@@ -36,7 +36,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var entry in sortedEntries)
+                                    @foreach (var entry in PagedEntries)
                                     {
                                         <tr>
                                             <td>@entry.Date?.ToShortDateString()</td>
@@ -60,6 +60,27 @@
                                 </tbody>
                             </table>
                         </div>
+                        @if (TotalPages > 1)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <small class="text-muted">
+                                    Showing @PageStart&ndash;@PageEnd of @logEntries.Count() entries
+                                </small>
+                                <nav aria-label="Log entries pagination">
+                                    <ul class="pagination pagination-sm mb-0">
+                                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                                            <button class="page-link" @onclick="PreviousPage">Previous</button>
+                                        </li>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">@_currentPage / @TotalPages</span>
+                                        </li>
+                                        <li class="page-item @(_currentPage == TotalPages ? "disabled" : "")">
+                                            <button class="page-link" @onclick="NextPage">Next</button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        }
                     }
                     else
                     {
@@ -76,11 +97,11 @@
 
 @if (showDialog)
 {
-    <AddLogEntryDialog 
+    <AddLogEntryDialog
         @ref="dialogComponent"
         LogEntry="selectedEntry"
-        VehicleId="@(vehicleId ?? 0)" 
-        OnLogEntryAdded="HandleLogEntryAdded" 
+        VehicleId="@(vehicleId ?? 0)"
+        OnLogEntryAdded="HandleLogEntryAdded"
         OnClosed="HandleDialogClosed" />
 }
 
@@ -109,9 +130,16 @@
 
     private const string VehicleColumn = "Vehicle";
     private const string ReadingColumn = "Reading";
+    private const int PageSize = 25;
 
     private IEnumerable<LogEntry> logEntries = new List<LogEntry>();
     private IEnumerable<LogEntry> sortedEntries => ApplySort(logEntries);
+    private IEnumerable<LogEntry> PagedEntries => sortedEntries.Skip((_currentPage - 1) * PageSize).Take(PageSize);
+    private int TotalPages => (int)Math.Ceiling(logEntries.Count() / (double)PageSize);
+    private int PageStart => logEntries.Any() ? (_currentPage - 1) * PageSize + 1 : 0;
+    private int PageEnd => Math.Min(_currentPage * PageSize, logEntries.Count());
+
+    private int _currentPage = 1;
     private string sortColumn = nameof(LogEntry.Date);
     private bool sortAscending = false;
     private bool IsSingleMode => vehicleId.HasValue;
@@ -182,6 +210,7 @@
             successMessage = "Log entry created successfully!";
         }
         logEntries = await GetLogEntriesAsync();
+        _currentPage = 1;
         showSuccessMessage = true;
         StateHasChanged();
         await Task.Delay(3000);
@@ -233,6 +262,17 @@
             sortColumn = column;
             sortAscending = true;
         }
+        _currentPage = 1;
+    }
+
+    private void PreviousPage()
+    {
+        if (_currentPage > 1) _currentPage--;
+    }
+
+    private void NextPage()
+    {
+        if (_currentPage < TotalPages) _currentPage++;
     }
 
     private IEnumerable<LogEntry> ApplySort(IEnumerable<LogEntry> entries)
