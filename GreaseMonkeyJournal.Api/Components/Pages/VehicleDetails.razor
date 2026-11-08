@@ -1,6 +1,7 @@
 @page "/vehicle/{VehicleId:int}"
 @using GreaseMonkeyJournal.Api.Components.Models
 @using GreaseMonkeyJournal.Api.Components.Services
+@using System.Globalization
 
 <PageTitle>Vehicle Details</PageTitle>
 
@@ -71,6 +72,69 @@
                 </div>
             </div>
         </div>
+
+        <!-- Cost summary -->
+        @if (logEntries.Any())
+        {
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-currency-exchange me-2"></i>Cost Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3 mb-4">
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Total Cost</div>
+                                    <div class="fs-5 fw-semibold">@FormatCurrency(TotalCost)</div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Maintenance</div>
+                                    <div class="fs-5 fw-semibold text-success">@FormatCurrency(MaintenanceCost)</div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Repairs</div>
+                                    <div class="fs-5 fw-semibold text-warning">@FormatCurrency(RepairCost)</div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="text-muted small">Log Entries</div>
+                                    <div class="fs-5 fw-semibold">@logEntries.Count</div>
+                                </div>
+                            </div>
+                            @if (CostByYear.Any())
+                            {
+                                <h6 class="mb-2">Cost by Year</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Year</th>
+                                                <th>Maintenance</th>
+                                                <th>Repairs</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in CostByYear)
+                                            {
+                                                <tr>
+                                                    <td>@row.Year</td>
+                                                    <td class="text-success">@FormatCurrency(row.Maintenance)</td>
+                                                    <td class="text-warning">@FormatCurrency(row.Repair)</td>
+                                                    <td class="fw-semibold">@FormatCurrency(row.Total)</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
 
         <!-- Information cards -->
         <div class="row">
@@ -169,16 +233,44 @@
     [Parameter] public int VehicleId { get; set; }
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private IVehicleInfoCardService InfoCardService { get; set; } = default!;
+    [Inject] private ILogEntryService LogEntryService { get; set; } = default!;
+    [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
     private Vehicle? vehicle;
     private List<VehicleInfoCard> cards = new();
+    private List<LogEntry> logEntries = new();
     private VehicleInfoCard editModel = new();
     private bool isLoading = true;
     private bool showSuccessMessage = false;
     private string successMessage = "";
+    private string currencyCode = "USD";
+    private static readonly Dictionary<string, string> CurrencyCultureMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["USD"] = "en-US",
+        ["EUR"] = "de-DE",
+        ["GBP"] = "en-GB",
+        ["SEK"] = "sv-SE"
+    };
 
     private bool IsEditing => editModel.Id > 0;
+
+    private decimal TotalCost => logEntries.Sum(e => e.Cost);
+    private decimal MaintenanceCost => logEntries.Where(e => e.Type == "maintenance").Sum(e => e.Cost);
+    private decimal RepairCost => logEntries.Where(e => e.Type == "repair").Sum(e => e.Cost);
+
+    private record YearCostRow(int Year, decimal Maintenance, decimal Repair, decimal Total);
+
+    private List<YearCostRow> CostByYear => logEntries
+        .Where(e => e.Date.HasValue)
+        .GroupBy(e => e.Date!.Value.Year)
+        .OrderByDescending(g => g.Key)
+        .Select(g => new YearCostRow(
+            g.Key,
+            g.Where(e => e.Type == "maintenance").Sum(e => e.Cost),
+            g.Where(e => e.Type == "repair").Sum(e => e.Cost),
+            g.Sum(e => e.Cost)))
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -186,8 +278,17 @@
         if (vehicle != null)
         {
             cards = await InfoCardService.GetByVehicleIdAsync(VehicleId);
+            logEntries = await LogEntryService.GetByVehicleIdAsync(VehicleId);
         }
+        currencyCode = await UserSettingsService.GetCurrencyCodeAsync();
         isLoading = false;
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        if (!CurrencyCultureMap.TryGetValue(currencyCode, out var cultureName))
+            cultureName = "en-US";
+        return amount.ToString("C", CultureInfo.GetCultureInfo(cultureName));
     }
 
     private string IdentifierValue()
