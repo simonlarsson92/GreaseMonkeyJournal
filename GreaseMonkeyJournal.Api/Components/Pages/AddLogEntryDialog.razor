@@ -1,3 +1,5 @@
+@using Microsoft.AspNetCore.Components.Forms
+
 <!-- Modal -->
 <div class="modal fade" id="addLogEntryModal" tabindex="-1" aria-labelledby="addLogEntryModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -63,6 +65,49 @@
                         <textarea class="form-control" id="notes" rows="3" maxlength="500" @bind="entry.Notes"></textarea>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Attachments <small class="text-muted">(jpg, png, webp, gif, pdf — max 10 MB each)</small></label>
+
+                        @if (existingAttachments.Any())
+                        {
+                            <ul class="list-group mb-2">
+                                @foreach (var att in existingAttachments)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                                        <a href="/api/attachments/@att.Id" target="_blank" class="text-truncate me-2">
+                                            <i class="bi bi-paperclip me-1"></i>@att.FileName
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveExistingAttachment(att.Id)">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        <InputFile OnChange="OnFilesSelected" multiple class="form-control" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf" />
+
+                        @if (newFiles.Any())
+                        {
+                            <ul class="list-group mt-2">
+                                @foreach (var f in newFiles)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                                        <span class="text-truncate me-2"><i class="bi bi-file-earmark me-1"></i>@f.Name</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveNewFile(f)">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fileError))
+                        {
+                            <div class="text-danger small mt-1">@fileError</div>
+                        }
+                    </div>
+
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">@SaveButtonText</button>
                         <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Cancel</button>
@@ -76,7 +121,7 @@
 @code {
     [Parameter] public LogEntry? LogEntry { get; set; }
     [Parameter] public int VehicleId { get; set; }
-    [Parameter] public EventCallback<LogEntry> OnLogEntryAdded { get; set; }
+    [Parameter] public EventCallback<LogEntrySubmission> OnLogEntryAdded { get; set; }
     [Parameter] public EventCallback OnClosed { get; set; }
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
@@ -84,6 +129,10 @@
     public IEnumerable<Vehicle>? Vehicles { get; set; } = new List<Vehicle>();
     private LogEntry entry = new() { Date = DateTime.Now };
     private Vehicle? selectedVehicle;
+    private List<IBrowserFile> newFiles = new();
+    private List<LogAttachment> existingAttachments = new();
+    private List<int> attachmentsToDelete = new();
+    private string fileError = "";
     private bool IsEditMode => entry.Id > 0;
     private string DialogTitle => IsEditMode ? "Edit Log Entry" : "Add Log Entry";
     private string SaveButtonText => IsEditMode ? "Save Changes" : "Add";
@@ -139,14 +188,41 @@
         };
     }
 
+    private void OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        fileError = "";
+        foreach (var file in e.GetMultipleFiles(10))
+        {
+            if (file.Size > 10 * 1024 * 1024)
+            {
+                fileError = $"'{file.Name}' exceeds the 10 MB limit.";
+                continue;
+            }
+            newFiles.Add(file);
+        }
+    }
+
+    private void RemoveNewFile(IBrowserFile file)
+    {
+        newFiles.Remove(file);
+    }
+
+    private void RemoveExistingAttachment(int attachmentId)
+    {
+        attachmentsToDelete.Add(attachmentId);
+        existingAttachments.RemoveAll(a => a.Id == attachmentId);
+    }
+
     private async Task Save()
     {
         if (entry.VehicleId > 0 && !string.IsNullOrWhiteSpace(entry.Description) && !string.IsNullOrWhiteSpace(entry.Type))
         {
-            await OnLogEntryAdded.InvokeAsync(entry);
+            var submission = new LogEntrySubmission(entry, newFiles, attachmentsToDelete);
+            await OnLogEntryAdded.InvokeAsync(submission);
             await CloseDialog();
         }
     }
+
     private void SetEntryFromParameters()
     {
         if (LogEntry is not null)
@@ -162,6 +238,7 @@
                 Notes = LogEntry.Notes,
                 SpeedometerReading = LogEntry.SpeedometerReading
             };
+            existingAttachments = LogEntry.Attachments.ToList();
         }
         else
         {
@@ -170,8 +247,12 @@
                 Date = DateTime.Now,
                 VehicleId = VehicleId > 0 ? VehicleId : 0
             };
+            existingAttachments = new();
         }
 
+        newFiles = new();
+        attachmentsToDelete = new();
+        fileError = "";
         selectedVehicle = Vehicles?.FirstOrDefault(v => v.Id == entry.VehicleId);
     }
 

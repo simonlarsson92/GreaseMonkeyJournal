@@ -3,6 +3,7 @@
 @using GreaseMonkeyJournal.Api.Components.Models
 @using GreaseMonkeyJournal.Api.Components.Services
 @using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Vehicle Log Entries</PageTitle>
 
@@ -32,6 +33,7 @@
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Cost))">Cost <i class="bi @GetSortIcon(nameof(LogEntry.Cost))"></i></th>
                                         <th role="button" @onclick="() => SortBy(ReadingColumn)">Reading <i class="bi @GetSortIcon(ReadingColumn)"></i></th>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Notes))">Notes <i class="bi @GetSortIcon(nameof(LogEntry.Notes))"></i></th>
+                                        <th></th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -50,6 +52,14 @@
                                             <td>@FormatCurrency(entry.Cost)</td>
                                             <td>@GetSpeedometerReadingDisplay(entry)</td>
                                             <td>@entry.Notes</td>
+                                            <td>
+                                                @if (entry.Attachments.Any())
+                                                {
+                                                    <span class="badge bg-secondary" title="@entry.Attachments.Count attachment(s)">
+                                                        <i class="bi bi-paperclip"></i> @entry.Attachments.Count
+                                                    </span>
+                                                }
+                                            </td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditDialog(entry)">
                                                     <i class="bi bi-pencil me-1"></i>Edit
@@ -101,7 +111,7 @@
         @ref="dialogComponent"
         LogEntry="selectedEntry"
         VehicleId="@(vehicleId ?? 0)"
-        OnLogEntryAdded="HandleLogEntryAdded"
+        OnLogEntryAdded="HandleLogEntrySubmission"
         OnClosed="HandleDialogClosed" />
 }
 
@@ -124,6 +134,7 @@
 @code {
     [Parameter] public int? vehicleId { get; set; }
     [Inject] private ILogEntryService LogEntryService { get; set; } = default!;
+    [Inject] private ILogAttachmentService AttachmentService { get; set; } = default!;
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
@@ -197,18 +208,26 @@
         }
     }
 
-    private async Task HandleLogEntryAdded(LogEntry newEntry)
+    private async Task HandleLogEntrySubmission(LogEntrySubmission submission)
     {
-        if (newEntry.Id > 0)
+        var entry = submission.Entry;
+        if (entry.Id > 0)
         {
-            await LogEntryService.UpdateAsync(newEntry);
+            await LogEntryService.UpdateAsync(entry);
             successMessage = "Log entry updated successfully!";
         }
         else
         {
-            await LogEntryService.AddAsync(newEntry);
+            await LogEntryService.AddAsync(entry);
             successMessage = "Log entry created successfully!";
         }
+
+        foreach (var id in submission.AttachmentIdsToDelete)
+            await AttachmentService.DeleteAsync(id);
+
+        foreach (var file in submission.NewFiles)
+            await AttachmentService.SaveAsync(entry.Id, file);
+
         logEntries = await GetLogEntriesAsync();
         _currentPage = 1;
         showSuccessMessage = true;

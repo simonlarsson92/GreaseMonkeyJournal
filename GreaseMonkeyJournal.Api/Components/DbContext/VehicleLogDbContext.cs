@@ -11,6 +11,7 @@ public class VehicleLogDbContext : Microsoft.EntityFrameworkCore.DbContext
     public DbSet<Reminder> Reminders { get; set; } = default!;
     public DbSet<NotificationSettings> NotificationSettings { get; set; } = default!;
     public DbSet<VehicleInfoCard> VehicleInfoCards { get; set; } = default!;
+    public DbSet<LogAttachment> LogAttachments { get; set; } = default!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Vehicle>().HasKey(v => v.Id);
@@ -44,5 +45,15 @@ public class VehicleLogDbContext : Microsoft.EntityFrameworkCore.DbContext
             .HasForeignKey(c => c.VehicleId);
         modelBuilder.Entity<VehicleInfoCard>()
             .HasIndex(c => c.VehicleId);
+
+        // LogAttachment relationship
+        modelBuilder.Entity<LogAttachment>().HasKey(a => a.Id);
+        modelBuilder.Entity<LogAttachment>()
+            .HasOne(a => a.LogEntry)
+            .WithMany(l => l.Attachments)
+            .HasForeignKey(a => a.LogEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<LogAttachment>()
+            .HasIndex(a => a.LogEntryId);
     }
 }

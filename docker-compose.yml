@@ -54,6 +54,8 @@ services:
       dockerfile: GreaseMonkeyJournal.Api/Dockerfile
     ports:
       - "8080:8080"
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       mariadb:
         condition: service_healthy
@@ -80,6 +82,7 @@ services:
 volumes:
   mariadb_data:
   seq_data:
+  uploads_data:
 
 networks:
   greasemonkey-network:
