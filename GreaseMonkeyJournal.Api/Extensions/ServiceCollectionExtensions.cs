@@ -39,7 +39,10 @@ public static class ServiceCollectionExtensions
         
         // Register notification dispatcher (used by background service and dev trigger)
         services.AddScoped<INotificationDispatcherService, NotificationDispatcherService>();
-        
+
+        // Register attachment service
+        services.AddScoped<ILogAttachmentService, LogAttachmentService>();
+
         return services;
     }
 

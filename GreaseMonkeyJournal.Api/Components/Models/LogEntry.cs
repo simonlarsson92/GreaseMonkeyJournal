@@ -12,6 +12,7 @@ public class LogEntry
     public string Type { get; set; } = string.Empty; // e.g., Repair, Maintenance
     public string? Notes { get; set; }
     public decimal? SpeedometerReading { get; set; } // Reading in KM or Hours based on vehicle's speedometer type
-    public Vehicle? Vehicle { get; set; } // Navigation property for related vehicle
+    public Vehicle? Vehicle { get; set; }
+    public ICollection<LogAttachment> Attachments { get; set; } = new List<LogAttachment>();
 }
 

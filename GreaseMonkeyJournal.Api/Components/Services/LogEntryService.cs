@@ -99,7 +99,7 @@ public class LogEntryService : ILogEntryService
     {
         try
         {
-            var entries = await _context.LogEntries.Include(le => le.Vehicle).ToListAsync();
+            var entries = await _context.LogEntries.Include(le => le.Vehicle).Include(le => le.Attachments).ToListAsync();
             return entries;
         }
         catch (Exception ex)
@@ -165,6 +165,7 @@ public class LogEntryService : ILogEntryService
         {
             var entries = await _context.LogEntries
                 .Include(le => le.Vehicle)
+                .Include(le => le.Attachments)
                 .Where(le => le.VehicleId == vehicleId)
                 .ToListAsync();
             return entries;
