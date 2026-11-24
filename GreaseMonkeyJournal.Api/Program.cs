@@ -53,6 +53,9 @@ try
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents();
 
+    // Increase SignalR message size for file uploads (10 MB + overhead)
+    builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 11 * 1024 * 1024);
+
     // Add application services using extension method
     builder.Services.AddApplicationServices();
 
@@ -90,6 +93,14 @@ try
     }
 
     app.UseAntiforgery();
+
+    // File download endpoint for log attachments
+    app.MapGet("/api/attachments/{id:int}", async (int id, ILogAttachmentService attachmentService) =>
+    {
+        var download = await attachmentService.GetFileAsync(id);
+        if (download == null) return Results.NotFound();
+        return Results.File(download.Content, download.ContentType, download.FileName);
+    });
 
     app.MapStaticAssets();
     app.MapRazorComponents<App>()

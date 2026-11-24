@@ -3,6 +3,7 @@
 @using GreaseMonkeyJournal.Api.Components.Models
 @using GreaseMonkeyJournal.Api.Components.Services
 @using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Vehicle Log Entries</PageTitle>
 
@@ -32,6 +33,7 @@
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Cost))">Cost <i class="bi @GetSortIcon(nameof(LogEntry.Cost))"></i></th>
                                         <th role="button" @onclick="() => SortBy(ReadingColumn)">Reading <i class="bi @GetSortIcon(ReadingColumn)"></i></th>
                                         <th role="button" @onclick="() => SortBy(nameof(LogEntry.Notes))">Notes <i class="bi @GetSortIcon(nameof(LogEntry.Notes))"></i></th>
+                                        <th></th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -50,6 +52,16 @@
                                             <td>@FormatCurrency(entry.Cost)</td>
                                             <td>@GetSpeedometerReadingDisplay(entry)</td>
                                             <td>@entry.Notes</td>
+                                            <td>
+                                                @if (entry.Attachments.Any())
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-link p-0" @onclick="() => ShowAttachmentsModal(entry)">
+                                                        <span class="badge bg-secondary">
+                                                            <i class="bi bi-paperclip"></i> @entry.Attachments.Count
+                                                        </span>
+                                                    </button>
+                                                }
+                                            </td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditDialog(entry)">
                                                     <i class="bi bi-pencil me-1"></i>Edit
@@ -101,8 +113,39 @@
         @ref="dialogComponent"
         LogEntry="selectedEntry"
         VehicleId="@(vehicleId ?? 0)"
-        OnLogEntryAdded="HandleLogEntryAdded"
+        OnLogEntryAdded="HandleLogEntrySubmission"
         OnClosed="HandleDialogClosed" />
+}
+
+@if (showAttachmentsModal && attachmentViewEntry != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-paperclip me-2"></i>Attachments</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAttachmentsModal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var att in attachmentViewEntry.Attachments)
+                        {
+                            <li class="list-group-item px-0">
+                                <a href="/api/attachments/@att.Id" target="_blank" class="d-flex align-items-center gap-2">
+                                    <i class="bi @GetAttachmentIcon(att.ContentType)"></i>
+                                    <span class="text-truncate">@att.FileName</span>
+                                    <small class="text-muted ms-auto text-nowrap">@FormatFileSize(att.FileSizeBytes)</small>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAttachmentsModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @if (showSuccessMessage)
@@ -124,6 +167,7 @@
 @code {
     [Parameter] public int? vehicleId { get; set; }
     [Inject] private ILogEntryService LogEntryService { get; set; } = default!;
+    [Inject] private ILogAttachmentService AttachmentService { get; set; } = default!;
     [Inject] private IVehicleService VehicleService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IUserSettingsService UserSettingsService { get; set; } = default!;
@@ -144,6 +188,8 @@
     private bool sortAscending = false;
     private bool IsSingleMode => vehicleId.HasValue;
     private bool showDialog = false;
+    private bool showAttachmentsModal = false;
+    private LogEntry? attachmentViewEntry;
     private bool showSuccessMessage = false;
     private string successMessage = "";
     private AddLogEntryDialog? dialogComponent;
@@ -185,7 +231,8 @@
             Cost = entry.Cost,
             Type = entry.Type,
             Notes = entry.Notes,
-            SpeedometerReading = entry.SpeedometerReading
+            SpeedometerReading = entry.SpeedometerReading,
+            Attachments = entry.Attachments
         };
 
         showDialog = true;
@@ -197,18 +244,26 @@
         }
     }
 
-    private async Task HandleLogEntryAdded(LogEntry newEntry)
+    private async Task HandleLogEntrySubmission(LogEntrySubmission submission)
     {
-        if (newEntry.Id > 0)
+        var entry = submission.Entry;
+        if (entry.Id > 0)
         {
-            await LogEntryService.UpdateAsync(newEntry);
+            await LogEntryService.UpdateAsync(entry);
             successMessage = "Log entry updated successfully!";
         }
         else
         {
-            await LogEntryService.AddAsync(newEntry);
+            await LogEntryService.AddAsync(entry);
             successMessage = "Log entry created successfully!";
         }
+
+        foreach (var id in submission.AttachmentIdsToDelete)
+            await AttachmentService.DeleteAsync(id);
+
+        foreach (var file in submission.NewFiles)
+            await AttachmentService.SaveAsync(entry.Id, file);
+
         logEntries = await GetLogEntriesAsync();
         _currentPage = 1;
         showSuccessMessage = true;
@@ -273,6 +328,28 @@
     private void NextPage()
     {
         if (_currentPage < TotalPages) _currentPage++;
+    }
+
+    private void ShowAttachmentsModal(LogEntry entry)
+    {
+        attachmentViewEntry = entry;
+        showAttachmentsModal = true;
+    }
+
+    private void CloseAttachmentsModal()
+    {
+        showAttachmentsModal = false;
+        attachmentViewEntry = null;
+    }
+
+    private static string GetAttachmentIcon(string contentType) =>
+        contentType.StartsWith("image/") ? "bi-file-image" : "bi-file-earmark-pdf";
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024} KB";
+        return $"{bytes / (1024 * 1024)} MB";
     }
 
     private IEnumerable<LogEntry> ApplySort(IEnumerable<LogEntry> entries)

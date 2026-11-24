@@ -17,10 +17,46 @@ namespace GreaseMonkeyJournal.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.16")
+                .HasAnnotation("ProductVersion", "9.0.23")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+
+            modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("LogEntryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LogEntryId");
+
+                    b.ToTable("LogAttachments");
+                });
 
             modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogEntry", b =>
                 {
@@ -199,6 +235,17 @@ namespace GreaseMonkeyJournal.Migrations
                     b.ToTable("VehicleInfoCards");
                 });
 
+            modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogAttachment", b =>
+                {
+                    b.HasOne("GreaseMonkeyJournal.Api.Components.Models.LogEntry", "LogEntry")
+                        .WithMany("Attachments")
+                        .HasForeignKey("LogEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LogEntry");
+                });
+
             modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogEntry", b =>
                 {
                     b.HasOne("GreaseMonkeyJournal.Api.Components.Models.Vehicle", "Vehicle")
@@ -230,6 +277,11 @@ namespace GreaseMonkeyJournal.Migrations
                         .IsRequired();
 
                     b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.LogEntry", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("GreaseMonkeyJournal.Api.Components.Models.Vehicle", b =>

@@ -43,6 +43,10 @@ public class UserSettingsService : IUserSettingsService
             _logger.LogWarning(ex, "Currency code read from localStorage was cancelled");
             return DefaultCurrencyCode;
         }
+        catch (InvalidOperationException)
+        {
+            return DefaultCurrencyCode;
+        }
     }
 
     public async Task SetCurrencyCodeAsync(string currencyCode)
