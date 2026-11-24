@@ -55,9 +55,11 @@
                                             <td>
                                                 @if (entry.Attachments.Any())
                                                 {
-                                                    <span class="badge bg-secondary" title="@entry.Attachments.Count attachment(s)">
-                                                        <i class="bi bi-paperclip"></i> @entry.Attachments.Count
-                                                    </span>
+                                                    <button type="button" class="btn btn-sm btn-link p-0" @onclick="() => ShowAttachmentsModal(entry)">
+                                                        <span class="badge bg-secondary">
+                                                            <i class="bi bi-paperclip"></i> @entry.Attachments.Count
+                                                        </span>
+                                                    </button>
                                                 }
                                             </td>
                                             <td>
@@ -115,6 +117,37 @@
         OnClosed="HandleDialogClosed" />
 }
 
+@if (showAttachmentsModal && attachmentViewEntry != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-paperclip me-2"></i>Attachments</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAttachmentsModal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var att in attachmentViewEntry.Attachments)
+                        {
+                            <li class="list-group-item px-0">
+                                <a href="/api/attachments/@att.Id" target="_blank" class="d-flex align-items-center gap-2">
+                                    <i class="bi @GetAttachmentIcon(att.ContentType)"></i>
+                                    <span class="text-truncate">@att.FileName</span>
+                                    <small class="text-muted ms-auto text-nowrap">@FormatFileSize(att.FileSizeBytes)</small>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAttachmentsModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (showSuccessMessage)
 {
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
@@ -155,6 +188,8 @@
     private bool sortAscending = false;
     private bool IsSingleMode => vehicleId.HasValue;
     private bool showDialog = false;
+    private bool showAttachmentsModal = false;
+    private LogEntry? attachmentViewEntry;
     private bool showSuccessMessage = false;
     private string successMessage = "";
     private AddLogEntryDialog? dialogComponent;
@@ -196,7 +231,8 @@
             Cost = entry.Cost,
             Type = entry.Type,
             Notes = entry.Notes,
-            SpeedometerReading = entry.SpeedometerReading
+            SpeedometerReading = entry.SpeedometerReading,
+            Attachments = entry.Attachments
         };
 
         showDialog = true;
@@ -292,6 +328,28 @@
     private void NextPage()
     {
         if (_currentPage < TotalPages) _currentPage++;
+    }
+
+    private void ShowAttachmentsModal(LogEntry entry)
+    {
+        attachmentViewEntry = entry;
+        showAttachmentsModal = true;
+    }
+
+    private void CloseAttachmentsModal()
+    {
+        showAttachmentsModal = false;
+        attachmentViewEntry = null;
+    }
+
+    private static string GetAttachmentIcon(string contentType) =>
+        contentType.StartsWith("image/") ? "bi-file-image" : "bi-file-earmark-pdf";
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024} KB";
+        return $"{bytes / (1024 * 1024)} MB";
     }
 
     private IEnumerable<LogEntry> ApplySort(IEnumerable<LogEntry> entries)
